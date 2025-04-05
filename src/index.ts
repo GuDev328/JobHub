@@ -1,0 +1,38 @@
+import express from 'express';
+import { createServer } from 'http';
+import usersRouters from '~/routers/accountsRouters';
+import mediasRouters from '~/routers/mediasRouters';
+import conversationsRouters from '~/routers/conversationsRouters';
+import jobsRouters from '~/routers/jobsRouters';
+import db from './services/databaseServices';
+import { defaultsErrorHandler } from './middlewares/errorsMiddlewares';
+import cors, { CorsOptions } from 'cors';
+import initializeSocket from './utils/socket';
+import swaggerUi from 'swagger-ui-express';
+import fs from 'fs';
+import YAML from 'yaml';
+import path from 'path';
+import { env, isProduction } from './constants/config';
+import helmet from 'helmet';
+
+const app = express();
+const httpServer = createServer(app);
+
+const corsConfig: CorsOptions = {
+  origin: isProduction ? env.clientUrl : '*'
+};
+
+app.use(helmet());
+app.use(cors(corsConfig));
+app.use(express.json());
+
+initializeSocket(httpServer);
+
+app.use('/users', usersRouters);
+app.use('/medias', mediasRouters);
+app.use('/jobs', jobsRouters);
+app.use('/conversations', conversationsRouters);
+app.use(defaultsErrorHandler);
+
+const port = env.port || 3030;
+httpServer.listen(port, () => console.log('JobHub server is running port: ' + port));
