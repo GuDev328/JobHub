@@ -22,7 +22,8 @@ export const createJobController = async (req: Request<ParamsDictionary, any, an
     fields,
     skills,
     salary,
-    city
+    city,
+    deadline
   } = req.body;
   const fieldsFinds = await Promise.all(
     fields.map(async (field: string) => {
@@ -62,7 +63,8 @@ export const createJobController = async (req: Request<ParamsDictionary, any, an
       fields: fieldsFinds,
       skills: skillsFinds,
       salary,
-      city
+      city,
+      deadline
     })
   );
   res.status(200).json({
@@ -83,7 +85,8 @@ export const updateJobController = async (req: Request<ParamsDictionary, any, an
     gender,
     fields,
     skills,
-    salary
+    salary,
+    deadline
   } = req.body;
   const fieldsFinds = await Promise.all(
     fields.map(async (field: string) => {
@@ -123,7 +126,8 @@ export const updateJobController = async (req: Request<ParamsDictionary, any, an
         gender,
         fields: fieldsFinds,
         skills: skillsFinds,
-        salary
+        salary,
+        deadline
       }
     }
   );

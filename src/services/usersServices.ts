@@ -43,7 +43,7 @@ class UsersService {
         }
       },
       {
-        expiresIn: env.accessTokenExpiresIn
+        expiresIn: Number(env.accessTokenExpiresIn) || 10000
       }
     );
   }
@@ -59,7 +59,7 @@ class UsersService {
         }
       },
       {
-        expiresIn: expiresIn || env.refreshTokenExporesIn
+        expiresIn: expiresIn || Number(env.refreshTokenExporesIn)
       }
     );
   }
@@ -257,7 +257,7 @@ class UsersService {
       { _id: new ObjectId(userId) },
       { $set: { verify_email_token: emailVerifyToken } }
     );
-    isNotOauth && sendVerifyEmail(payload.email, emailVerifyToken, SendEmail.VerifyEmail);
+    // isNotOauth && sendVerifyEmail(payload.email, emailVerifyToken, SendEmail.VerifyEmail);
     return {
       accessToken,
       refreshToken
