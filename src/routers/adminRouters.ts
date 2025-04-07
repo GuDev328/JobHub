@@ -1,14 +1,11 @@
 import { accessTokenValidator, verifiedUserValidator } from '~/middlewares/usersMiddlewares';
 import { catchError } from '~/utils/handler';
 import { Router } from 'express';
+import { getListAccountController } from '~/controllers/adminControllers';
 
 const router = Router();
 
-router.get(
-  '/list-accounts',
-  accessTokenValidator,
-  catchError(() => {})
-);
+router.get('/list-accounts', accessTokenValidator, catchError(getListAccountController));
 
 router.post(
   '/accounts/:id/block',

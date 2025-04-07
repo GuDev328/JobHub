@@ -4,6 +4,8 @@ import usersRouters from '~/routers/accountsRouters';
 import mediasRouters from '~/routers/mediasRouters';
 import conversationsRouters from '~/routers/conversationsRouters';
 import jobsRouters from '~/routers/jobsRouters';
+import adminsRouter from '~/routers/adminRouters';
+import employersRouter from '~/routers/employerRouters';
 import db from './services/databaseServices';
 import { defaultsErrorHandler } from './middlewares/errorsMiddlewares';
 import cors, { CorsOptions } from 'cors';
@@ -34,6 +36,8 @@ app.use('/medias', mediasRouters);
 app.use('/jobs', jobsRouters);
 app.use('/others', othersRouters);
 app.use('/candidates', candidatesRouters);
+app.use('/admins', adminsRouter);
+app.use('/employers', employersRouter);
 app.use('/conversations', conversationsRouters);
 app.use(defaultsErrorHandler);
 
