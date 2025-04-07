@@ -8,7 +8,7 @@ interface JobType {
   description: string;
   level: LevelType;
   education: EducationType;
-  type_work: TypeWorkType;
+  type_work: TypeWorkType | TypeWorkType[];
   year_experience: YearExperienceType;
   num_of_employees: number | number[];
   gender: GenderType;
@@ -17,6 +17,8 @@ interface JobType {
   salary: number | number[];
   status?: JobStatus;
   city: number;
+  deadline:Date | null
+
 }
 
 export class Job {
@@ -26,7 +28,7 @@ export class Job {
   description: string;
   level: LevelType;
   education: EducationType;
-  type_work: TypeWorkType;
+  type_work: TypeWorkType | TypeWorkType[];
   year_experience: YearExperienceType;
   num_of_employees: number | number[];
   gender: GenderType;
@@ -35,6 +37,7 @@ export class Job {
   salary: number | number[];
   status: JobStatus;
   city: number;
+  deadline: Date | null;
 
   constructor(job: JobType) {
     this._id = job._id || new ObjectId();
@@ -52,5 +55,6 @@ export class Job {
     this.salary = job.salary || 0;
     this.status = JobStatus.Created;
     this.city = job.city;
+    this.deadline = job.deadline;
   }
 }
