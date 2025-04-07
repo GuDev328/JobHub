@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb';
+import { ApplyStatus } from '~/constants/enum';
 
 interface ApplyType {
   _id?: ObjectId;
@@ -8,7 +9,7 @@ interface ApplyType {
   phone_number: string;
   content: string;
   cv: string;
-  status: number;
+  status: ApplyStatus;
 }
 
 export class Apply {
@@ -19,7 +20,7 @@ export class Apply {
   phone_number: string;
   content: string;
   cv: string;
-  status: number;
+  status: ApplyStatus;
 
   constructor(apply: ApplyType) {
     this._id = apply._id || new ObjectId();
@@ -29,6 +30,6 @@ export class Apply {
     this.phone_number = apply.phone_number || '';
     this.content = apply.content || '';
     this.cv = apply.cv || '';
-    this.status = apply.status || 0;
+    this.status = apply.status || ApplyStatus.Pending;
   }
 }

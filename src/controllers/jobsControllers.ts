@@ -6,6 +6,8 @@ import db from '~/services/databaseServices';
 import { Job } from '~/models/schemas/JobSchema';
 import { Field } from '~/models/schemas/FieldSchema';
 import { Skill } from '~/models/schemas/SkillSchema';
+import { provinces } from '~/constants/const';
+import { ApplyStatus, JobStatus } from '~/constants/enum';
 
 export const createJobController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const {
@@ -19,7 +21,8 @@ export const createJobController = async (req: Request<ParamsDictionary, any, an
     gender,
     fields,
     skills,
-    salary
+    salary,
+    city
   } = req.body;
   const fieldsFinds = await Promise.all(
     fields.map(async (field: string) => {
@@ -58,7 +61,8 @@ export const createJobController = async (req: Request<ParamsDictionary, any, an
       gender,
       fields: fieldsFinds,
       skills: skillsFinds,
-      salary
+      salary,
+      city
     })
   );
   res.status(200).json({
@@ -184,8 +188,9 @@ export const getJobController = async (req: Request<ParamsDictionary, any, any>,
       message: 'Công việc không tồn tại'
     });
   }
+  const cityInfo = provinces.find((city: any) => city._id === job[0].city);
   res.status(200).json({
-    result: job[0],
+    result: { ...job[0], city_info: cityInfo },
     message: 'Lấy công việc thành công'
   });
 };
@@ -212,7 +217,8 @@ export const getListJobController = async (req: Request<ParamsDictionary, any, a
     skills,
     salary_min,
     salary_max,
-    status
+    status,
+    city
   } = req.query;
   const pageNumber = Number(page) || 1;
   const limitNumber = Number(limit) || 10;
@@ -270,8 +276,11 @@ export const getListJobController = async (req: Request<ParamsDictionary, any, a
   if (status) {
     filter.status = Number(status);
   }
+  if (city) {
+    filter.city = Number(city);
+  }
   console.log(filter);
-  const [jobs, totalJobs] = await Promise.all([
+  let [jobs, totalJobs] = await Promise.all([
     db.jobs
       .aggregate([
         {
@@ -325,7 +334,11 @@ export const getListJobController = async (req: Request<ParamsDictionary, any, a
       .toArray(),
     db.jobs.countDocuments(filter)
   ]);
-
+  totalJobs = totalJobs + 0;
+  jobs = jobs.map((job: any) => {
+    job.city_info = provinces.find((city: any) => city._id === job.city);
+    return job;
+  });
   const totalPages = Math.ceil(totalJobs / limitNumber);
 
   const result = {
@@ -340,5 +353,108 @@ export const getListJobController = async (req: Request<ParamsDictionary, any, a
   res.status(200).json({
     result,
     message: 'Lấy danh sách công việc thành công'
+  });
+};
+
+export const recruitmentJobController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
+  const { id } = req.params;
+  await db.jobs.updateOne({ _id: new ObjectId(id) }, { $set: { status: JobStatus.Recuriting } });
+  res.status(200).json({
+    message: 'Đã đăng tin tuyển dụng công việc thành công'
+  });
+};
+
+export const getListCandidateApplyJobController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
+  const { id } = req.params;
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+  const candidates = await db.apply
+    .aggregate([
+      {
+        $match: {
+          job_id: new ObjectId(id)
+        }
+      },
+      {
+        $skip: skip
+      },
+      {
+        $limit: limit
+      },
+      {
+        $lookup: {
+          from: 'Accounts',
+          localField: 'candidate_id',
+          foreignField: '_id',
+          as: 'candidate_account'
+        }
+      },
+      {
+        $unwind: '$candidate_account'
+      },
+      {
+        $lookup: {
+          from: 'Candidates',
+          localField: 'candidate_account.user_id',
+          foreignField: '_id',
+          as: 'candidate_info'
+        }
+      },
+      {
+        $unwind: '$candidate_info'
+      }
+    ])
+    .toArray();
+  const totalCandidates = await db.apply.countDocuments({ job_id: new ObjectId(id) });
+  const totalPages = Math.ceil(totalCandidates / limit);
+  res.status(200).json({
+    result: candidates,
+    pagination: {
+      page,
+      limit,
+      total_pages: totalPages,
+      total_records: totalCandidates
+    }
+  });
+};
+
+export const approveCandidateController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
+  const { id } = req.params;
+  await db.apply.updateOne({ _id: new ObjectId(id) }, { $set: { status: ApplyStatus.Approved } });
+  res.status(200).json({
+    message: 'Phê duyệt ứng viên thành công'
+  });
+};
+
+export const rejectCandidateController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
+  const { id } = req.params;
+  await db.apply.updateOne({ _id: new ObjectId(id) }, { $set: { status: ApplyStatus.Rejected } });
+  res.status(200).json({
+    message: 'Từ chối ứng viên thành công'
+  });
+};
+
+export const makeInterviewController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
+  const { id } = req.params;
+  await db.apply.updateOne({ _id: new ObjectId(id) }, { $set: { status: ApplyStatus.Interview } });
+  res.status(200).json({
+    message: 'Mời phỏng vấn thành công'
+  });
+};
+
+export const makePassController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
+  const { id } = req.params;
+  await db.apply.updateOne({ _id: new ObjectId(id) }, { $set: { status: ApplyStatus.Passed } });
+  res.status(200).json({
+    message: 'Phỏng vấn Passed ứng viên thành công'
+  });
+};
+
+export const makeFailController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
+  const { id } = req.params;
+  await db.apply.updateOne({ _id: new ObjectId(id) }, { $set: { status: ApplyStatus.Failed } });
+  res.status(200).json({
+    message: 'Phỏng vấn Failed ứng viên thành công'
   });
 };

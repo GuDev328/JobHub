@@ -54,6 +54,16 @@ export enum JobStatus {
   Recuriting
 }
 
+export enum ApplyStatus {
+  Pending,
+  Approved,
+  Interview,
+  Rejected,
+  Canceled,
+  Passed,
+  Failed
+}
+
 export interface PhoneInfo {
   name: string;
   phone_number: string;

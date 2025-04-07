@@ -16,6 +16,7 @@ interface JobType {
   skills: ObjectId[];
   salary: number | number[];
   status?: JobStatus;
+  city: number;
 }
 
 export class Job {
@@ -33,6 +34,7 @@ export class Job {
   skills: ObjectId[];
   salary: number | number[];
   status: JobStatus;
+  city: number;
 
   constructor(job: JobType) {
     this._id = job._id || new ObjectId();
@@ -49,5 +51,6 @@ export class Job {
     this.skills = job.skills || [];
     this.salary = job.salary || 0;
     this.status = JobStatus.Created;
+    this.city = job.city;
   }
 }

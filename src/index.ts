@@ -14,7 +14,8 @@ import YAML from 'yaml';
 import path from 'path';
 import { env, isProduction } from './constants/config';
 import helmet from 'helmet';
-
+import othersRouters from './routers/othersRouter';
+import candidatesRouters from './routers/candidatesRouters';
 const app = express();
 const httpServer = createServer(app);
 
@@ -31,6 +32,8 @@ initializeSocket(httpServer);
 app.use('/users', usersRouters);
 app.use('/medias', mediasRouters);
 app.use('/jobs', jobsRouters);
+app.use('/others', othersRouters);
+app.use('/candidates', candidatesRouters);
 app.use('/conversations', conversationsRouters);
 app.use(defaultsErrorHandler);
 
