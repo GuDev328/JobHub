@@ -228,7 +228,7 @@ export const getListJobController = async (req: Request<ParamsDictionary, any, a
   const limitNumber = Number(limit) || 10;
   const skip = (pageNumber - 1) * limitNumber;
   const filter: any = {
-    employer_id: new ObjectId(req.body.decodeAuthorization.payload.userId)
+    // employer_id: new ObjectId(req.body.decodeAuthorization.payload.userId)
   };
 
   if (key) {
@@ -236,7 +236,7 @@ export const getListJobController = async (req: Request<ParamsDictionary, any, a
   }
 
   if (level) {
-    filter.level = Number(level);
+    filter.level = { $in: JSON.parse(level as string).map(Number) };
   }
 
   if (education) {
@@ -244,11 +244,11 @@ export const getListJobController = async (req: Request<ParamsDictionary, any, a
   }
 
   if (type_work) {
-    filter.type_work = Number(type_work);
+    filter.type_work = { $in: JSON.parse(type_work as string).map(Number) };
   }
 
   if (year_experience) {
-    filter.year_experience = Number(year_experience);
+    filter.year_experience ={ $in: JSON.parse(year_experience as string).map(Number) } ;
   }
 
   if (gender) {
@@ -281,7 +281,7 @@ export const getListJobController = async (req: Request<ParamsDictionary, any, a
     filter.status = Number(status);
   }
   if (city) {
-    filter.city = Number(city);
+    filter.city ={ $in: JSON.parse(city as string).map(Number) } ;
   }
   console.log(filter);
   let [jobs, totalJobs] = await Promise.all([
