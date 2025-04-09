@@ -228,7 +228,7 @@ export const getListJobController = async (req: Request<ParamsDictionary, any, a
   const limitNumber = Number(limit) || 10;
   const skip = (pageNumber - 1) * limitNumber;
   const filter: any = {
-    // employer_id: new ObjectId(req.body.decodeAuthorization.payload.userId)
+    employer_id: new ObjectId(req.body.decodeAuthorization.payload.userId)
   };
 
   if (key) {

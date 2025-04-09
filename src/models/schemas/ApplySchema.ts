@@ -21,6 +21,7 @@ export class Apply {
   content: string;
   cv: string;
   status: ApplyStatus;
+  createdAt:Date
 
   constructor(apply: ApplyType) {
     this._id = apply._id || new ObjectId();
@@ -31,5 +32,6 @@ export class Apply {
     this.content = apply.content || '';
     this.cv = apply.cv || '';
     this.status = apply.status || ApplyStatus.Pending;
+    this.createdAt = new Date()
   }
 }
