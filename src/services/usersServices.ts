@@ -43,7 +43,7 @@ class UsersService {
         }
       },
       {
-        expiresIn: Number(env.accessTokenExpiresIn) || 10000
+        expiresIn: env.accessTokenExpiresIn
       }
     );
   }
@@ -59,7 +59,7 @@ class UsersService {
         }
       },
       {
-        expiresIn: expiresIn || Number(env.refreshTokenExporesIn)
+        expiresIn: expiresIn || env.refreshTokenExporesIn
       }
     );
   }

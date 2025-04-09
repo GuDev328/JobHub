@@ -38,7 +38,8 @@ app.use('/others', othersRouters);
 app.use('/candidates', candidatesRouters);
 app.use('/admins', adminsRouter);
 app.use('/employers', employersRouter);
-app.use('/conversations', conversationsRouters);
+app.use('/chats', conversationsRouters);
+
 app.use(defaultsErrorHandler);
 
 const port = env.port || 3030;

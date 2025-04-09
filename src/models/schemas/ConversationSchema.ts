@@ -4,7 +4,7 @@ interface ConversationType {
   _id?: ObjectId;
   employer_id: ObjectId;
   candidate_id: ObjectId;
-  last_message: ObjectId;
+  last_message?: ObjectId;
 }
 
 export class Conversation {

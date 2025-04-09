@@ -4,29 +4,49 @@ import { ObjectId } from 'mongodb';
 class ConversationsService {
   constructor() {}
 
-  async getConversation(class_id: string, limit: number, page: number) {
-    const result = await db.conversations
+  async getChats(conversation_id: string, limit: number, page: number) {
+    const result = await db.chats
       .aggregate([
-        { $match: { class_id: new ObjectId(class_id) } },
+        { $match: { conversation_id: new ObjectId(conversation_id) } },
         {
           $lookup: {
-            from: 'Users',
+            from: 'Accounts',
             localField: 'sender_id',
             foreignField: '_id',
-            as: 'user'
+            as: 'account_info'
           }
         },
-        { $unwind: '$user' },
+        { $unwind: '$account_info' },
+        {
+          $lookup: {
+            from: 'Employers',
+            localField: 'account_info.user_id',
+            foreignField: '_id',
+            as: 'employer_info'
+          }
+        },
+        {
+          $lookup: {
+            from: 'Candidates',
+            localField: 'account_info.user_id',
+            foreignField: '_id',
+            as: 'candidate_info'
+          }
+        },
         { $sort: { created_at: -1 } },
         { $skip: limit * (page - 1) },
         { $limit: limit }
       ])
       .toArray();
-    const total = await db.conversations.countDocuments({ class_id: new ObjectId(class_id) });
+    const total = await db.chats.countDocuments({ conversation_id: new ObjectId(conversation_id) });
     return {
       result,
-      page,
-      total_page: Math.ceil(total / limit)
+      pagination: {
+        page,
+        limit,
+        total_pages: Math.ceil(total / limit),
+        total_records: total
+      }
     };
   }
 }
