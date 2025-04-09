@@ -38,6 +38,7 @@ export class Job {
   status: JobStatus;
   city: number;
   deadline: Date | null;
+  createdAt: Date;
 
   constructor(job: JobType) {
     this._id = job._id || new ObjectId();
@@ -56,5 +57,6 @@ export class Job {
     this.status = JobStatus.Created;
     this.city = job.city;
     this.deadline = job.deadline;
+    this.createdAt = new Date();
   }
 }

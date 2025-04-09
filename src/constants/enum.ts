@@ -51,7 +51,8 @@ export enum TypeWorkType {
 
 export enum JobStatus {
   Created,
-  Recuriting
+  Recuriting,
+  Stopped
 }
 
 export enum ApplyStatus {
