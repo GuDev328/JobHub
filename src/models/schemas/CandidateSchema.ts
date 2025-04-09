@@ -14,7 +14,7 @@ interface CandidateType {
   experience_years?: number;
   education?: EducationType | null;
   level?: LevelType | null;
-  field?: ObjectId | null;
+  fields?: ObjectId[] | null;
   current_job_position?: string;
   salary_expected?: number;
   language_level?: string;
@@ -40,7 +40,7 @@ export class Candidate {
   experience_years: number;
   education: EducationType | null;
   level: LevelType | null;
-  field: ObjectId | null;
+  fields: ObjectId[] | null;
   current_job_position: string;
   salary_expected: number;
   language_level: string;
@@ -65,7 +65,7 @@ export class Candidate {
     this.experience_years = candidate.experience_years || 0;
     this.education = candidate.education || null;
     this.level = candidate.level || null;
-    this.field = candidate.field || null;
+    this.fields = candidate.fields || [];
     this.current_job_position = candidate.current_job_position || '';
     this.salary_expected = candidate.salary_expected || 0;
     this.language_level = candidate.language_level || '';

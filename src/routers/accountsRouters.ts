@@ -10,6 +10,7 @@ import {
   registerController,
   resendVerifyEmailController,
   resetPasswordController,
+  updateMeController,
   verifyEmailController
 } from '~/controllers/usersControllers';
 import { filterMiddleware } from '~/middlewares/commonMiddlewares';
@@ -42,6 +43,7 @@ router.post(
   catchError(resetPasswordController)
 );
 router.get('/get-me', accessTokenValidator, catchError(getMeController));
+router.put('/update-me', accessTokenValidator, catchError(updateMeController));
 router.post('/change-password', accessTokenValidator, changePasswordValidator, catchError(changePasswordController));
 
 export default router;

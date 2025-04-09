@@ -15,6 +15,7 @@ import {
   ResetPasswordRequest,
   VerifyEmailRequest
 } from '~/models/requests/UserRequests';
+import { Field } from '~/models/schemas/FieldSchema';
 import db from '~/services/databaseServices';
 import userService from '~/services/usersServices';
 
@@ -126,6 +127,89 @@ export const getMeController = async (req: Request<ParamsDictionary, any, any>, 
   res.status(200).json({
     result: result[0],
     message: 'Get me suscess'
+  });
+};
+
+export const updateMeController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
+  const userId = new ObjectId(req.body.decodeAuthorization.payload.userId);
+  const { candidate_body, employer_body } = req.body;
+
+  const account = await db.accounts.findOne({ _id: userId });
+  if (!account) {
+    throw new Error('Account not found');
+  }
+  let fieldsFinds;
+  if (candidate_body?.fields) {
+    fieldsFinds = await Promise.all(
+      candidate_body.fields.map(async (field: string) => {
+        const fieldFind = await db.fields.findOne({ name: field });
+        if (!fieldFind) {
+          const init = await db.fields.insertOne(new Field({ name: field }));
+          return new ObjectId(init.insertedId);
+        } else {
+          return fieldFind._id;
+        }
+      })
+    );
+  }
+  if (employer_body?.fields) {
+    fieldsFinds = await Promise.all(
+      employer_body.fields.map(async (field: string) => {
+        const fieldFind = await db.fields.findOne({ name: field });
+        if (!fieldFind) {
+          const init = await db.fields.insertOne(new Field({ name: field }));
+          return new ObjectId(init.insertedId);
+        } else {
+          return fieldFind._id;
+        }
+      })
+    );
+  }
+  if (account.role === UserRole.Candidate && account.user_id) {
+    await db.candidates.updateOne(
+      { _id: account.user_id },
+      {
+        $set: {
+          name: candidate_body.name,
+          address: candidate_body.address,
+          avatar: candidate_body.avatar,
+          cover_photo: candidate_body.cover_photo,
+          current_job_position: candidate_body.current_job_position,
+          cv: candidate_body.cv,
+          date_of_birth: new Date(candidate_body.date_of_birth),
+          description: candidate_body.description,
+          education: candidate_body.education,
+          experience_years: candidate_body.experience_years,
+          fields: fieldsFinds,
+          gender: candidate_body.gender,
+          language_level: candidate_body.language_level,
+          level: candidate_body.level,
+          phone_number: candidate_body.phone_number,
+          salary_expected: candidate_body.salary_expected
+        }
+      }
+    );
+  }
+  if (account.role === UserRole.Employer && account.user_id) {
+    await db.employer.updateOne(
+      { _id: account.user_id },
+      {
+        $set: {
+          address: employer_body.address,
+          avatar: employer_body.avatar,
+          cover_photo: employer_body.cover_photo,
+          description: employer_body.description,
+          employer_size: employer_body.employer_size,
+          fields: fieldsFinds,
+          name: employer_body.name,
+          phone_number: employer_body.phone_number
+        }
+      }
+    );
+  }
+
+  res.status(200).json({
+    message: 'Update me suscess'
   });
 };
 
