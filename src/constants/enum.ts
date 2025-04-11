@@ -49,11 +49,11 @@ export enum TypeWorkType {
   Hybrid
 }
 
-export enum JobStatus {
-  Created,
-  Recuriting,
-  Stopped
-}
+  export enum JobStatus {
+    Created,
+    Recuriting,
+    Stopped
+  }
 
 export enum ApplyStatus {
   Pending,

@@ -25,6 +25,8 @@ interface CandidateType {
     cv?: string;
   };
   cv?: string[];
+  skills?:ObjectId[]
+  feature_job_position?:string
 }
 
 export class Candidate {
@@ -40,8 +42,10 @@ export class Candidate {
   experience_years: number;
   education: EducationType | null;
   level: LevelType | null;
+  skills:ObjectId[]
   fields: ObjectId[] | null;
   current_job_position: string;
+  feature_job_position: string;
   salary_expected: number;
   language_level: string;
   pre_apply_info: {
@@ -76,5 +80,7 @@ export class Candidate {
       cv: ''
     };
     this.cv = candidate.cv || [];
+    this.skills = candidate.skills || []
+    this.feature_job_position = candidate.feature_job_position || ''
   }
 }
