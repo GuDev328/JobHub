@@ -100,6 +100,22 @@ export const getMeController = async (req: Request<ParamsDictionary, any, any>, 
         },
         {
           $unwind: '$candidate_info'
+        },
+        {
+          $lookup: {
+            from: 'Skills',
+            localField: 'candidate_info.skills',
+            foreignField: '_id',
+            as: 'skills_info'
+          }
+        },
+        {
+          $lookup: {
+            from: 'Fields',
+            localField: 'candidate_info.fields',
+            foreignField: '_id',
+            as: 'fields_info'
+          }
         }
       ])
       .toArray();
@@ -206,7 +222,7 @@ export const updateMeController = async (req: Request<ParamsDictionary, any, any
           level: candidate_body.level,
           phone_number: candidate_body.phone_number,
           salary_expected: candidate_body.salary_expected,
-          skills:candidate_body.skills,
+          skills:skillsFinds,
           feature_job_position:candidate_body.feature_job_position
         }
       }
