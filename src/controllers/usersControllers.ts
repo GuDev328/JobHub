@@ -16,6 +16,7 @@ import {
   VerifyEmailRequest
 } from '~/models/requests/UserRequests';
 import { Field } from '~/models/schemas/FieldSchema';
+import { Skill } from '~/models/schemas/SkillSchema';
 import db from '~/services/databaseServices';
 import userService from '~/services/usersServices';
 
@@ -133,12 +134,16 @@ export const getMeController = async (req: Request<ParamsDictionary, any, any>, 
 export const updateMeController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const userId = new ObjectId(req.body.decodeAuthorization.payload.userId);
   const { candidate_body, employer_body } = req.body;
+  console.log("red body",req.body);
+  console.log("red candidate_body",candidate_body);
+  console.log("red employer_body",employer_body);
 
   const account = await db.accounts.findOne({ _id: userId });
   if (!account) {
     throw new Error('Account not found');
   }
-  let fieldsFinds;
+  let fieldsFinds:any;
+  let skillsFinds;
   if (candidate_body?.fields) {
     fieldsFinds = await Promise.all(
       candidate_body.fields.map(async (field: string) => {
@@ -148,6 +153,21 @@ export const updateMeController = async (req: Request<ParamsDictionary, any, any
           return new ObjectId(init.insertedId);
         } else {
           return fieldFind._id;
+        }
+      })
+    );
+  }
+  if (candidate_body?.skills) {
+    skillsFinds = await Promise.all(
+      candidate_body?.skills.map(async (skill: string) => {
+        const techFind = await db.skills.findOne({ name: skill });
+        if (!techFind) {
+          fieldsFinds.map(async (fieldId: ObjectId) => {
+            const init = await db.skills.insertOne(new Skill({ name: skill, field_id: fieldId }));
+            return new ObjectId(init.insertedId);
+          });
+        } else {
+          return new ObjectId(techFind._id);
         }
       })
     );
@@ -185,7 +205,9 @@ export const updateMeController = async (req: Request<ParamsDictionary, any, any
           language_level: candidate_body.language_level,
           level: candidate_body.level,
           phone_number: candidate_body.phone_number,
-          salary_expected: candidate_body.salary_expected
+          salary_expected: candidate_body.salary_expected,
+          skills:candidate_body.skills,
+          feature_job_position:candidate_body.feature_job_position
         }
       }
     );

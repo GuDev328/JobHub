@@ -64,7 +64,7 @@ export const createJobController = async (req: Request<ParamsDictionary, any, an
       skills: skillsFinds,
       salary,
       city,
-      deadline
+      deadline:new Date(deadline)
     })
   );
   res.status(200).json({
@@ -222,6 +222,8 @@ export const getListJobController = async (req: Request<ParamsDictionary, any, a
     salary_min,
     salary_max,
     status,
+    deadline,
+    createdAt,
     city
   } = req.query;
   const pageNumber = Number(page) || 1;
@@ -234,7 +236,29 @@ export const getListJobController = async (req: Request<ParamsDictionary, any, a
   if (key) {
     filter.name = { $regex: key as string, $options: 'i' };
   }
-
+  if (Array.isArray(deadline) && deadline.length === 2) {
+    const [from, to] = deadline as [string, string];
+    const deadlineFilter: any = {};
+  
+    if (from) deadlineFilter.$gte = new Date(from);
+    if (to) deadlineFilter.$lte = new Date(to);
+  
+    if (Object.keys(deadlineFilter).length > 0) {
+      filter.deadline = deadlineFilter;
+    }
+  }
+  
+  if (Array.isArray(createdAt) && createdAt.length === 2) {
+    const [from, to] = createdAt as [string, string];
+    const createdAtFilter: any = {};
+  
+    if (from) createdAtFilter.$gte = new Date(from);
+    if (to) createdAtFilter.$lte = new Date(to);
+  
+    if (Object.keys(createdAtFilter).length > 0) {
+      filter.createdAt = createdAtFilter;
+    }
+  }
   if (level) {
     filter.level = { $in: JSON.parse(level as string).map(Number) };
   }
