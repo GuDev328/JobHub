@@ -14,7 +14,11 @@ import {
   recruitmentJobController,
   rejectCandidateController,
   approveCandidateController,
-  updateJobController
+  updateJobController,
+  candidateAcceptInvite,
+  inviteCandidateController,
+  acceptScheduleController,
+  candidateChangeInterviewSchedule
 } from '~/controllers/jobsControllers';
 const router = Router();
 
@@ -39,6 +43,13 @@ router.post('/make-interview/:id', accessTokenValidator, catchError(makeIntervie
 router.post('/make-pass/:id', accessTokenValidator, catchError(makePassController));
 
 router.post('/make-fail/:id', accessTokenValidator, catchError(makeFailController));
+
+router.post('/invite/:id', accessTokenValidator, catchError(inviteCandidateController));
+router.post('/candidate-accept-invite/:id', accessTokenValidator, catchError(candidateAcceptInvite));
+
+router.post('/accept-schedule/:id', accessTokenValidator, catchError(acceptScheduleController));
+
+router.post('/candidate-change-schedule/:id', accessTokenValidator, catchError(candidateChangeInterviewSchedule));
 
 router.put('/:id', accessTokenValidator, isAdminJobValidator, catchError(updateJobController));
 router.get('/:id', accessTokenValidator, catchError(getJobController));

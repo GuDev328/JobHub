@@ -17,8 +17,7 @@ interface JobType {
   salary: number | number[];
   status?: JobStatus;
   city: number;
-  deadline:Date | null
-
+  deadline: Date | null;
 }
 
 export class Job {

@@ -24,9 +24,14 @@ interface CandidateType {
     content?: string;
     cv?: string;
   };
-  cv?: string[];
-  skills?:ObjectId[]
-  feature_job_position?:string
+  cv?: CVType[];
+  skills?: ObjectId[];
+  feature_job_position?: string;
+}
+
+export interface CVType {
+  is_public: boolean;
+  cv: string;
 }
 
 export class Candidate {
@@ -42,7 +47,7 @@ export class Candidate {
   experience_years: number;
   education: EducationType | null;
   level: LevelType | null;
-  skills:ObjectId[]
+  skills: ObjectId[];
   fields: ObjectId[] | null;
   current_job_position: string;
   feature_job_position: string;
@@ -54,7 +59,7 @@ export class Candidate {
     content?: string;
     cv?: string;
   };
-  cv: string[];
+  cv: CVType[];
 
   constructor(candidate: CandidateType) {
     this._id = candidate._id || new ObjectId();
@@ -80,7 +85,7 @@ export class Candidate {
       cv: ''
     };
     this.cv = candidate.cv || [];
-    this.skills = candidate.skills || []
-    this.feature_job_position = candidate.feature_job_position || ''
+    this.skills = candidate.skills || [];
+    this.feature_job_position = candidate.feature_job_position || '';
   }
 }

@@ -7,7 +7,11 @@ import { Job } from '~/models/schemas/JobSchema';
 import { Field } from '~/models/schemas/FieldSchema';
 import { Skill } from '~/models/schemas/SkillSchema';
 import { provinces } from '~/constants/const';
-import { ApplyStatus, JobStatus } from '~/constants/enum';
+import { ApplyStatus, JobStatus, UserRole } from '~/constants/enum';
+import { ErrorWithStatus } from '~/models/Errors';
+import { httpStatus } from '~/constants/httpStatus';
+import { Apply } from '~/models/schemas/ApplySchema';
+import { CVType } from '~/models/schemas/CandidateSchema';
 
 export const createJobController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const {
@@ -64,7 +68,7 @@ export const createJobController = async (req: Request<ParamsDictionary, any, an
       skills: skillsFinds,
       salary,
       city,
-      deadline:new Date(deadline)
+      deadline: new Date(deadline)
     })
   );
   res.status(200).json({
@@ -239,22 +243,22 @@ export const getListJobController = async (req: Request<ParamsDictionary, any, a
   if (Array.isArray(deadline) && deadline.length === 2) {
     const [from, to] = deadline as [string, string];
     const deadlineFilter: any = {};
-  
+
     if (from) deadlineFilter.$gte = new Date(from);
     if (to) deadlineFilter.$lte = new Date(to);
-  
+
     if (Object.keys(deadlineFilter).length > 0) {
       filter.deadline = deadlineFilter;
     }
   }
-  
+
   if (Array.isArray(createdAt) && createdAt.length === 2) {
     const [from, to] = createdAt as [string, string];
     const createdAtFilter: any = {};
-  
+
     if (from) createdAtFilter.$gte = new Date(from);
     if (to) createdAtFilter.$lte = new Date(to);
-  
+
     if (Object.keys(createdAtFilter).length > 0) {
       filter.createdAt = createdAtFilter;
     }
@@ -272,7 +276,7 @@ export const getListJobController = async (req: Request<ParamsDictionary, any, a
   }
 
   if (year_experience) {
-    filter.year_experience ={ $in: JSON.parse(year_experience as string).map(Number) } ;
+    filter.year_experience = { $in: JSON.parse(year_experience as string).map(Number) };
   }
 
   if (gender) {
@@ -305,7 +309,7 @@ export const getListJobController = async (req: Request<ParamsDictionary, any, a
     filter.status = Number(status);
   }
   if (city) {
-    filter.city ={ $in: JSON.parse(city as string).map(Number) } ;
+    filter.city = { $in: JSON.parse(city as string).map(Number) };
   }
   console.log(filter);
   let [jobs, totalJobs] = await Promise.all([
@@ -463,11 +467,118 @@ export const rejectCandidateController = async (req: Request<ParamsDictionary, a
   });
 };
 
-export const makeInterviewController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
+export const inviteCandidateController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const { id } = req.params;
-  await db.apply.updateOne({ _id: new ObjectId(id) }, { $set: { status: ApplyStatus.Interview } });
+  const { job_id } = req.body;
+
+  const candidate = await db.accounts
+    .aggregate([
+      {
+        $match: {
+          _id: new ObjectId(id)
+        }
+      },
+      {
+        $lookup: {
+          from: 'Candidates',
+          localField: 'user_id',
+          foreignField: '_id',
+          as: 'candidate_info'
+        }
+      },
+      {
+        $unwind: '$candidate_info'
+      }
+    ])
+    .toArray();
+
+  await db.apply.insertOne(
+    new Apply({
+      job_id,
+      candidate_id: new ObjectId(id),
+      status: ApplyStatus.WaitingCandidateAcceptSchedule,
+      content: '',
+      cv: candidate[0].candidate_info.cv
+        .map((cv: CVType) => {
+          if (cv.is_public) return cv.cv;
+          return null;
+        })
+        .filter((cv: string | null) => cv !== null),
+      email: candidate[0].candidate_info.email,
+      phone_number: candidate[0].candidate_info.phone_number
+    })
+  );
   res.status(200).json({
     message: 'Mời phỏng vấn thành công'
+  });
+};
+
+export const candidateAcceptInvite = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
+  const { id } = req.params;
+  await db.apply.updateOne({ _id: new ObjectId(id) }, { $set: { status: ApplyStatus.CandidateAcceptInvite } });
+  res.status(200).json({
+    message: 'Đồng ý lời mời thành công'
+  });
+};
+
+export const makeInterviewController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
+  const { id } = req.params;
+  const { date, time, note } = req.body;
+  await db.apply.updateOne(
+    { _id: new ObjectId(id) },
+    {
+      $set: {
+        status: ApplyStatus.WaitingCandidateAcceptSchedule,
+        interview_employee_suggest_schedule: { date, time, note }
+      }
+    }
+  );
+  res.status(200).json({
+    message: 'Mời phỏng vấn thành công'
+  });
+};
+
+export const candidateChangeInterviewSchedule = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
+  const { id } = req.params;
+  const { date, time, note } = req.body;
+  await db.apply.updateOne(
+    { _id: new ObjectId(id) },
+    {
+      $set: {
+        status: ApplyStatus.WaitingEmployerAcceptSchedule,
+        interview_candidate_suggest_schedule: { date, time, note }
+      }
+    }
+  );
+  res.status(200).json({
+    message: 'Đổi lại phỏng vấn thành công'
+  });
+};
+
+export const acceptScheduleController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
+  const { id } = req.params;
+  const { role } = req.body.decodeAuthorization.payload;
+  const apply = await db.apply.findOne({ _id: new ObjectId(id) });
+
+  if (!apply) {
+    throw new ErrorWithStatus({
+      message: 'Không tìm tháy ứng tuyển này',
+      status: httpStatus.NOT_FOUND
+    });
+  }
+  if (role === UserRole.Candidate) {
+    await db.apply.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { status: ApplyStatus.Interview, interview_final_schedule: apply.interview_employee_suggest_schedule } }
+    );
+  } else {
+    await db.apply.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { status: ApplyStatus.Interview, interview_final_schedule: apply.interview_candidate_suggest_schedule } }
+    );
+  }
+  res.status(200).json({
+    message: 'Đồng ý phỏng vấn thành công'
   });
 };
 

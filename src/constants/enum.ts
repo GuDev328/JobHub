@@ -49,11 +49,11 @@ export enum TypeWorkType {
   Hybrid
 }
 
-  export enum JobStatus {
-    Created,
-    Recuriting,
-    Stopped
-  }
+export enum JobStatus {
+  Created,
+  Recuriting,
+  Stopped
+}
 
 export enum ApplyStatus {
   Pending,
@@ -62,7 +62,11 @@ export enum ApplyStatus {
   Rejected,
   Canceled,
   Passed,
-  Failed
+  Failed,
+  CandidateRejectInvite,
+  CandidateAcceptInvite,
+  WaitingCandidateAcceptSchedule,
+  WaitingEmployerAcceptSchedule
 }
 
 export interface PhoneInfo {
