@@ -44,8 +44,8 @@ export const verifyEmployerController = async (req: Request<ParamsDictionary, an
 
 
 export const getListCandicateController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
-  const { page, limit, email, name, phone_number, status, role } = req.query;
-
+  const { page, limit, email, name, phone_number, status, role,user_id } = req.query;
+  const userIdStr = user_id as string;
   const pageNum = parseInt(page as string) || 1;
   const limitNum = parseInt(limit as string) || 10;
   const skipNum = (pageNum - 1) * limitNum;
@@ -54,6 +54,9 @@ export const getListCandicateController = async (req: Request<ParamsDictionary, 
 
   if (email) {
     matchConditions.email = { $regex: email, $options: 'i' };
+  }
+  if (user_id) {
+    matchConditions.user_id = new ObjectId(userIdStr);
   }
     matchConditions.role = 1;
   if (status) {
@@ -100,7 +103,6 @@ export const getListCandicateController = async (req: Request<ParamsDictionary, 
               ? {
                   $or: [
                     { 'employer_info.name': { $regex: name, $options: 'i' } },
-                    { 'candidate_info.feature_job_position': { $regex: name, $options: 'i' } },
                     { 'candidate_info.name': { $regex: name, $options: 'i' } },
                   ]
                 }
@@ -179,7 +181,8 @@ export const getListCandicateController = async (req: Request<ParamsDictionary, 
               ? {
                   $or: [
                     { 'employer_info.name': { $regex: name, $options: 'i' } },
-                    { 'candidate_info.name': { $regex: name, $options: 'i' } }
+                    { 'candidate_info.name': { $regex: name, $options: 'i' } },
+                    { 'candidate_info.feature_job_position': { $regex: name, $options: 'i' } },
                   ]
                 }
               : {},

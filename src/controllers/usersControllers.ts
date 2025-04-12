@@ -51,10 +51,73 @@ export const logoutController = async (req: Request<ParamsDictionary, any, Logou
 };
 
 export const refreshTokenController = async (
-  req: Request<ParamsDictionary, any, RefreshTokenRequest>,
+  req: Request<ParamsDictionary, any, any>,
   res: Response
 ) => {
-  const result = await userService.refreshToken(req.body);
+  const {
+id  } = req.query;
+const matchConditions: any = {};
+const result = await db.accounts
+.aggregate([
+  {
+    $match: matchConditions
+  },
+  {
+    $lookup: {
+      from: 'Employers',
+      localField: 'user_id',
+      foreignField: '_id',
+      as: 'employer_info'
+    }
+  },
+  {
+    $lookup: {
+      from: 'Candidates',
+      localField: 'user_id',
+      foreignField: '_id',
+      as: 'candidate_info'
+    }
+  },
+  {
+    $lookup: {
+      from: 'Skills',
+      localField: 'candidate_info.skills',
+      foreignField: '_id',
+      as: 'skills_info'
+    }
+  },
+  {
+    $lookup: {
+      from: 'Fields',
+      localField: 'candidate_info.fields',
+      foreignField: '_id',
+      as: 'fields_info'
+    }
+  },
+  {
+    $unwind: {
+      path: '$employer_info',
+      preserveNullAndEmptyArrays: true
+    }
+  },
+  {
+    $unwind: {
+      path: '$candidate_info',
+      preserveNullAndEmptyArrays: true
+    }
+  },
+  {
+    $project: {
+      _id: 1,
+      email: 1,
+      candidate_info:1,
+      skills_info:1,
+      fields_info:1
+    }
+  },
+])
+.toArray();
+
   res.status(200).json({
     result,
     message: 'refresh Token suscess'
@@ -287,6 +350,7 @@ export const resetPasswordController = async (
 
 export const getProfileController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const { _id, name, email, date_of_birth, avatar } = req.body.user;
+  const result = await userService.forgotPassword(req.body);
   res.status(200).json({
     result: { _id, name, email, date_of_birth, avatar },
     message: 'Get profile sucess'
