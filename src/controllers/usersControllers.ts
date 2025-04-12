@@ -150,15 +150,12 @@ export const getMeController = async (req: Request<ParamsDictionary, any, any>, 
 export const updateMeController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const userId = new ObjectId(req.body.decodeAuthorization.payload.userId);
   const { candidate_body, employer_body } = req.body;
-  console.log("red body",req.body);
-  console.log("red candidate_body",candidate_body);
-  console.log("red employer_body",employer_body);
 
   const account = await db.accounts.findOne({ _id: userId });
   if (!account) {
     throw new Error('Account not found');
   }
-  let fieldsFinds:any;
+  let fieldsFinds: any;
   let skillsFinds;
   if (candidate_body?.fields) {
     fieldsFinds = await Promise.all(
@@ -222,8 +219,8 @@ export const updateMeController = async (req: Request<ParamsDictionary, any, any
           level: candidate_body.level,
           phone_number: candidate_body.phone_number,
           salary_expected: candidate_body.salary_expected,
-          skills:skillsFinds,
-          feature_job_position:candidate_body.feature_job_position
+          skills: skillsFinds,
+          feature_job_position: candidate_body.feature_job_position
         }
       }
     );

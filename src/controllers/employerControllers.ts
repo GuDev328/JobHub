@@ -42,9 +42,8 @@ export const verifyEmployerController = async (req: Request<ParamsDictionary, an
   });
 };
 
-
 export const getListCandicateController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
-  const { page, limit, email, name, phone_number, status, role } = req.query;
+  const { page, limit, email, name, phone_number, status, fields, skills } = req.query;
 
   const pageNum = parseInt(page as string) || 1;
   const limitNum = parseInt(limit as string) || 10;
@@ -55,9 +54,15 @@ export const getListCandicateController = async (req: Request<ParamsDictionary, 
   if (email) {
     matchConditions.email = { $regex: email, $options: 'i' };
   }
-    matchConditions.role = 1;
+  matchConditions.role = 1;
   if (status) {
     matchConditions.status = parseInt(status as string);
+  }
+  if (fields) {
+    matchConditions.fields = { $in: (fields as string[]).map((field: string) => new ObjectId(field)) };
+  }
+  if (skills) {
+    matchConditions.skills = { $in: (skills as string[]).map((skill: string) => new ObjectId(skill)) };
   }
 
   const totalRecords = await db.accounts
@@ -101,7 +106,7 @@ export const getListCandicateController = async (req: Request<ParamsDictionary, 
                   $or: [
                     { 'employer_info.name': { $regex: name, $options: 'i' } },
                     { 'candidate_info.feature_job_position': { $regex: name, $options: 'i' } },
-                    { 'candidate_info.name': { $regex: name, $options: 'i' } },
+                    { 'candidate_info.name': { $regex: name, $options: 'i' } }
                   ]
                 }
               : {},
@@ -198,9 +203,9 @@ export const getListCandicateController = async (req: Request<ParamsDictionary, 
         $project: {
           _id: 1,
           email: 1,
-          candidate_info:1,
-          skills_info:1,
-          fields_info:1
+          candidate_info: 1,
+          skills_info: 1,
+          fields_info: 1
         }
       },
       { $skip: skipNum },
@@ -216,6 +221,62 @@ export const getListCandicateController = async (req: Request<ParamsDictionary, 
       limit: limitNum,
       total_pages,
       total_records
+    }
+  });
+};
+
+export const getListEvaluationController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
+  const { page, limit } = req.query;
+  const userId = req.body.decodeAuthorization.payload.userId;
+  const employerId = new ObjectId(userId);
+
+  const pageNum = parseInt(page as string) || 1;
+  const limitNum = parseInt(limit as string) || 10;
+  const skipNum = (pageNum - 1) * limitNum;
+
+  const totalRecords = await db.evaluations.countDocuments({ employer_id: employerId });
+  const total_pages = Math.ceil(totalRecords / limitNum);
+
+  const evaluations = await db.evaluations
+    .aggregate([
+      {
+        $match: { employer_id: employerId }
+      },
+      {
+        $lookup: {
+          from: 'Accounts',
+          localField: 'candidate_id',
+          foreignField: '_id',
+          as: 'account_info'
+        }
+      },
+      {
+        $unwind: '$account_info'
+      },
+      {
+        $lookup: {
+          from: 'Candidates',
+          localField: 'account_info.user_id',
+          foreignField: '_id',
+          as: 'candidate_info'
+        }
+      },
+      {
+        $unwind: '$candidate_info'
+      },
+      { $skip: skipNum },
+      { $limit: limitNum }
+    ])
+    .toArray();
+
+  res.status(200).json({
+    message: 'Lấy danh sách đánh giá thành công',
+    result: evaluations,
+    pagination: {
+      page: pageNum,
+      limit: limitNum,
+      total_pages,
+      total_records: totalRecords
     }
   });
 };

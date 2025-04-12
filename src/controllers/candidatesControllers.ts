@@ -5,6 +5,7 @@ import { provinces } from '~/constants/const';
 import { ApplyStatus } from '~/constants/enum';
 import { ErrorWithStatus } from '~/models/Errors';
 import { Apply } from '~/models/schemas/ApplySchema';
+import { Evaluation } from '~/models/schemas/EvaluationSchema';
 import db from '~/services/databaseServices';
 export const applyJobController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const jobId = req.params.id;
@@ -260,6 +261,56 @@ export const searchJobController = async (req: Request<ParamsDictionary, any, an
             foreignField: '_id',
             as: 'fields_info'
           }
+        },
+        {
+          $lookup: {
+            from: 'Applies',
+            let: { jobId: '$_id' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $eq: ['$job_id', '$$jobId']
+                  }
+                }
+              },
+              {
+                $count: 'total'
+              }
+            ],
+            as: 'applications_count'
+          }
+        },
+        {
+          $addFields: {
+            total_applications: {
+              $ifNull: [{ $arrayElemAt: ['$applications_count.total', 0] }, 0]
+            }
+          }
+        },
+        {
+          $lookup: {
+            from: 'Evaluations',
+            localField: 'employer_id',
+            foreignField: 'employer_id',
+            as: 'employer_evaluations'
+          }
+        },
+        {
+          $addFields: {
+            employer_rating: {
+              average_rate: {
+                $cond: [{ $eq: [{ $size: '$employer_evaluations' }, 0] }, 0, { $avg: '$employer_evaluations.rate' }]
+              },
+              total_evaluations: { $size: '$employer_evaluations' }
+            }
+          }
+        },
+        {
+          $project: {
+            applications_count: 0,
+            employer_evaluations: 0
+          }
         }
       ])
       .toArray(),
@@ -284,5 +335,22 @@ export const searchJobController = async (req: Request<ParamsDictionary, any, an
   res.status(200).json({
     result,
     message: 'Lấy danh sách công việc thành công'
+  });
+};
+
+export const evaluateEmployerController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
+  const { id } = req.params;
+  const { rate, content } = req.body;
+  const candidateId = req.body.decodeAuthorization.payload.userId;
+  const employerId = new ObjectId(id);
+  const evaluation = new Evaluation({
+    employer_id: employerId,
+    candidate_id: new ObjectId(candidateId),
+    rate,
+    content
+  });
+  await db.evaluations.insertOne(evaluation);
+  res.status(200).json({
+    message: 'Đánh giá thành công'
   });
 };
