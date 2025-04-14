@@ -12,6 +12,13 @@ import { ErrorWithStatus } from '~/models/Errors';
 import { httpStatus } from '~/constants/httpStatus';
 import { Apply } from '~/models/schemas/ApplySchema';
 import { CVType } from '~/models/schemas/CandidateSchema';
+import {
+  sendMailFailInterview,
+  sendMailInviteCandidate,
+  sendMailInviteInterview,
+  sendMailPassInterview,
+  sendMailSuitableCV
+} from '~/services/emailServices';
 
 export const createJobController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const {
@@ -186,6 +193,56 @@ export const getJobController = async (req: Request<ParamsDictionary, any, any>,
           localField: 'fields',
           foreignField: '_id',
           as: 'fields_info'
+        }
+      },
+      {
+        $lookup: {
+          from: 'Applies',
+          let: { jobId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ['$job_id', '$$jobId']
+                }
+              }
+            },
+            {
+              $count: 'total'
+            }
+          ],
+          as: 'applications_count'
+        }
+      },
+      {
+        $addFields: {
+          total_applications: {
+            $ifNull: [{ $arrayElemAt: ['$applications_count.total', 0] }, 0]
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: 'Evaluations',
+          localField: 'employer_id',
+          foreignField: 'employer_id',
+          as: 'employer_evaluations'
+        }
+      },
+      {
+        $addFields: {
+          employer_rating: {
+            average_rate: {
+              $cond: [{ $eq: [{ $size: '$employer_evaluations' }, 0] }, 0, { $avg: '$employer_evaluations.rate' }]
+            },
+            total_evaluations: { $size: '$employer_evaluations' }
+          }
+        }
+      },
+      {
+        $project: {
+          applications_count: 0,
+          employer_evaluations: 0
         }
       }
     ])
@@ -362,6 +419,56 @@ export const getListJobController = async (req: Request<ParamsDictionary, any, a
             foreignField: '_id',
             as: 'fields_info'
           }
+        },
+        {
+          $lookup: {
+            from: 'Applies',
+            let: { jobId: '$_id' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $eq: ['$job_id', '$$jobId']
+                  }
+                }
+              },
+              {
+                $count: 'total'
+              }
+            ],
+            as: 'applications_count'
+          }
+        },
+        {
+          $addFields: {
+            total_applications: {
+              $ifNull: [{ $arrayElemAt: ['$applications_count.total', 0] }, 0]
+            }
+          }
+        },
+        {
+          $lookup: {
+            from: 'Evaluations',
+            localField: 'employer_id',
+            foreignField: 'employer_id',
+            as: 'employer_evaluations'
+          }
+        },
+        {
+          $addFields: {
+            employer_rating: {
+              average_rate: {
+                $cond: [{ $eq: [{ $size: '$employer_evaluations' }, 0] }, 0, { $avg: '$employer_evaluations.rate' }]
+              },
+              total_evaluations: { $size: '$employer_evaluations' }
+            }
+          }
+        },
+        {
+          $project: {
+            applications_count: 0,
+            employer_evaluations: 0
+          }
         }
       ])
       .toArray(),
@@ -403,11 +510,12 @@ export const getListCandidateApplyJobController = async (req: Request<ParamsDict
   const status = req.query?.status;
   console.log("status",status)
   const limit = Number(req.query.limit) || 10;
+  const { name, status } = req.query;
   const skip = (page - 1) * limit;
-  const matchConditions: any = {
-    job_id: new ObjectId(id),
-  };
-  
+  const filter: any = { job_id: new ObjectId(id) };
+  if (name) {
+    filter.name = { $regex: name as string, $options: 'i' };
+  }
   if (status) {
     if (Array.isArray(status)) {
       matchConditions.status = {
@@ -420,7 +528,7 @@ export const getListCandidateApplyJobController = async (req: Request<ParamsDict
   const candidates = await db.apply
     .aggregate([
       {
-        $match: matchConditions
+        $match: filter
       },
       {
         $skip: skip
@@ -452,7 +560,7 @@ export const getListCandidateApplyJobController = async (req: Request<ParamsDict
       }
     ])
     .toArray();
-  const totalCandidates = await db.apply.countDocuments({ job_id: new ObjectId(id) });
+  const totalCandidates = await db.apply.countDocuments(filter);
   const totalPages = Math.ceil(totalCandidates / limit);
   res.status(200).json({
     result: candidates,
@@ -467,7 +575,71 @@ export const getListCandidateApplyJobController = async (req: Request<ParamsDict
 
 export const approveCandidateController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const { id } = req.params;
+  const [apply] = await db.apply
+    .aggregate([
+      {
+        $match: { _id: new ObjectId(id) }
+      },
+      {
+        $lookup: {
+          from: 'Jobs',
+          localField: 'job_id',
+          foreignField: '_id',
+          as: 'job_info'
+        }
+      },
+      {
+        $lookup: {
+          from: 'Accounts',
+          localField: 'candidate_id',
+          foreignField: '_id',
+          as: 'candidate_account'
+        }
+      },
+      {
+        $lookup: {
+          from: 'Candidates',
+          localField: 'candidate_account.user_id',
+          foreignField: '_id',
+          as: 'candidate_info'
+        }
+      },
+      {
+        $lookup: {
+          from: 'Accounts',
+          localField: 'job_info.employer_id',
+          foreignField: '_id',
+          as: 'employer_account'
+        }
+      },
+      {
+        $lookup: {
+          from: 'Employers',
+          localField: 'employer_account.user_id',
+          foreignField: '_id',
+          as: 'employer_info'
+        }
+      },
+      {
+        $addFields: {
+          job_info: { $arrayElemAt: ['$job_info', 0] },
+          candidate_info: { $arrayElemAt: ['$candidate_info', 0] },
+          candidate_account: { $arrayElemAt: ['$candidate_account', 0] },
+          employer_info: { $arrayElemAt: ['$employer_info', 0] },
+          employer_account: { $arrayElemAt: ['$employer_account', 0] }
+        }
+      }
+    ])
+    .toArray();
+
   await db.apply.updateOne({ _id: new ObjectId(id) }, { $set: { status: ApplyStatus.Approved } });
+  console.log(apply);
+  sendMailSuitableCV({
+    toAddress: apply.candidate_account.email,
+    candidateName: apply.candidate_info.name,
+    employerName: apply.employer_info.name,
+    jobTitle: apply.job_info.name
+  });
   res.status(200).json({
     message: 'Phê duyệt ứng viên thành công'
   });
@@ -505,7 +677,27 @@ export const inviteCandidateController = async (req: Request<ParamsDictionary, a
       }
     ])
     .toArray();
-
+  const employer = await db.accounts
+    .aggregate([
+      {
+        $match: {
+          _id: new ObjectId(req.body.decodeAuthorization.payload.userId)
+        }
+      },
+      {
+        $lookup: {
+          from: 'Employers',
+          localField: 'user_id',
+          foreignField: '_id',
+          as: 'employer_info'
+        }
+      },
+      {
+        $unwind: '$employer_info'
+      }
+    ])
+    .toArray();
+  const job = await db.jobs.findOne({ _id: new ObjectId(job_id) });
   await db.apply.insertOne(
     new Apply({
       job_id,
@@ -522,6 +714,14 @@ export const inviteCandidateController = async (req: Request<ParamsDictionary, a
       phone_number: candidate[0].candidate_info.phone_number
     })
   );
+
+  sendMailInviteCandidate({
+    toAddress: candidate[0].candidate_info.email,
+    candidateName: candidate[0].candidate_info.name,
+    employerName: employer[0].employer_info.name,
+    jobTitle: job?.name || '',
+    jobId: job_id
+  });
   res.status(200).json({
     message: 'Mời phỏng vấn thành công'
   });
@@ -598,7 +798,55 @@ export const acceptScheduleController = async (req: Request<ParamsDictionary, an
 
 export const makePassController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const { id } = req.params;
+  const apply = await db.apply.findOne({ _id: new ObjectId(id) });
+  const candidate = await db.accounts
+    .aggregate([
+      {
+        $match: {
+          _id: new ObjectId(apply?.candidate_id)
+        }
+      },
+      {
+        $lookup: {
+          from: 'Candidates',
+          localField: 'user_id',
+          foreignField: '_id',
+          as: 'candidate_info'
+        }
+      },
+      {
+        $unwind: '$candidate_info'
+      }
+    ])
+    .toArray();
+  const employer = await db.accounts
+    .aggregate([
+      {
+        $match: {
+          _id: new ObjectId(req.body.decodeAuthorization.payload.userId)
+        }
+      },
+      {
+        $lookup: {
+          from: 'Employers',
+          localField: 'user_id',
+          foreignField: '_id',
+          as: 'employer_info'
+        }
+      },
+      {
+        $unwind: '$employer_info'
+      }
+    ])
+    .toArray();
+  const job = await db.jobs.findOne({ _id: new ObjectId(apply?.job_id) });
   await db.apply.updateOne({ _id: new ObjectId(id) }, { $set: { status: ApplyStatus.Passed } });
+  sendMailPassInterview({
+    toAddress: candidate[0].candidate_info.email,
+    candidateName: candidate[0].candidate_info.name,
+    employerName: employer[0].employer_info.name,
+    jobTitle: job?.name || ''
+  });
   res.status(200).json({
     message: 'Phỏng vấn Passed ứng viên thành công'
   });
@@ -606,7 +854,56 @@ export const makePassController = async (req: Request<ParamsDictionary, any, any
 
 export const makeFailController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const { id } = req.params;
+  const apply = await db.apply.findOne({ _id: new ObjectId(id) });
+  const candidate = await db.accounts
+    .aggregate([
+      {
+        $match: {
+          _id: new ObjectId(apply?.candidate_id)
+        }
+      },
+      {
+        $lookup: {
+          from: 'Candidates',
+          localField: 'user_id',
+          foreignField: '_id',
+          as: 'candidate_info'
+        }
+      },
+      {
+        $unwind: '$candidate_info'
+      }
+    ])
+    .toArray();
+  const employer = await db.accounts
+    .aggregate([
+      {
+        $match: {
+          _id: new ObjectId(req.body.decodeAuthorization.payload.userId)
+        }
+      },
+      {
+        $lookup: {
+          from: 'Employers',
+          localField: 'user_id',
+          foreignField: '_id',
+          as: 'employer_info'
+        }
+      },
+      {
+        $unwind: '$employer_info'
+      }
+    ])
+    .toArray();
+  const job = await db.jobs.findOne({ _id: new ObjectId(apply?.job_id) });
   await db.apply.updateOne({ _id: new ObjectId(id) }, { $set: { status: ApplyStatus.Failed } });
+
+  sendMailFailInterview({
+    toAddress: candidate[0].candidate_info.email,
+    candidateName: candidate[0].candidate_info.name,
+    employerName: employer[0].employer_info.name,
+    jobTitle: job?.name || ''
+  });
   res.status(200).json({
     message: 'Phỏng vấn Failed ứng viên thành công'
   });

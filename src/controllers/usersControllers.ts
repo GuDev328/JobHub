@@ -51,73 +51,10 @@ export const logoutController = async (req: Request<ParamsDictionary, any, Logou
 };
 
 export const refreshTokenController = async (
-  req: Request<ParamsDictionary, any, any>,
+  req: Request<ParamsDictionary, any, RefreshTokenRequest>,
   res: Response
 ) => {
-  const {
-id  } = req.query;
-const matchConditions: any = {};
-const result = await db.accounts
-.aggregate([
-  {
-    $match: matchConditions
-  },
-  {
-    $lookup: {
-      from: 'Employers',
-      localField: 'user_id',
-      foreignField: '_id',
-      as: 'employer_info'
-    }
-  },
-  {
-    $lookup: {
-      from: 'Candidates',
-      localField: 'user_id',
-      foreignField: '_id',
-      as: 'candidate_info'
-    }
-  },
-  {
-    $lookup: {
-      from: 'Skills',
-      localField: 'candidate_info.skills',
-      foreignField: '_id',
-      as: 'skills_info'
-    }
-  },
-  {
-    $lookup: {
-      from: 'Fields',
-      localField: 'candidate_info.fields',
-      foreignField: '_id',
-      as: 'fields_info'
-    }
-  },
-  {
-    $unwind: {
-      path: '$employer_info',
-      preserveNullAndEmptyArrays: true
-    }
-  },
-  {
-    $unwind: {
-      path: '$candidate_info',
-      preserveNullAndEmptyArrays: true
-    }
-  },
-  {
-    $project: {
-      _id: 1,
-      email: 1,
-      candidate_info:1,
-      skills_info:1,
-      fields_info:1
-    }
-  },
-])
-.toArray();
-
+  const result = await userService.refreshToken(req.body);
   res.status(200).json({
     result,
     message: 'refresh Token suscess'
@@ -213,15 +150,12 @@ export const getMeController = async (req: Request<ParamsDictionary, any, any>, 
 export const updateMeController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const userId = new ObjectId(req.body.decodeAuthorization.payload.userId);
   const { candidate_body, employer_body } = req.body;
-  console.log("red body",req.body);
-  console.log("red candidate_body",candidate_body);
-  console.log("red employer_body",employer_body);
 
   const account = await db.accounts.findOne({ _id: userId });
   if (!account) {
     throw new Error('Account not found');
   }
-  let fieldsFinds:any;
+  let fieldsFinds: any;
   let skillsFinds;
   if (candidate_body?.fields) {
     fieldsFinds = await Promise.all(
@@ -285,8 +219,8 @@ export const updateMeController = async (req: Request<ParamsDictionary, any, any
           level: candidate_body.level,
           phone_number: candidate_body.phone_number,
           salary_expected: candidate_body.salary_expected,
-          skills:skillsFinds,
-          feature_job_position:candidate_body.feature_job_position
+          skills: skillsFinds,
+          feature_job_position: candidate_body.feature_job_position
         }
       }
     );
@@ -350,7 +284,6 @@ export const resetPasswordController = async (
 
 export const getProfileController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const { _id, name, email, date_of_birth, avatar } = req.body.user;
-  const result = await userService.forgotPassword(req.body);
   res.status(200).json({
     result: { _id, name, email, date_of_birth, avatar },
     message: 'Get profile sucess'

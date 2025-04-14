@@ -12,6 +12,7 @@ import { Field } from '~/models/schemas/FieldSchema';
 import { Job } from '~/models/schemas/JobSchema';
 import { Apply } from '~/models/schemas/ApplySchema';
 import { VerifyEmployer } from '~/models/schemas/VerifySchema';
+import { Evaluation } from '~/models/schemas/EvaluationSchema';
 
 const uri = env.mongodbURI;
 
@@ -54,6 +55,9 @@ class DatabaseServices {
   }
   get verifyEmployers(): Collection<VerifyEmployer> {
     return this.db.collection('VerifyEmployers');
+  }
+  get evaluations(): Collection<Evaluation> {
+    return this.db.collection('Evaluations');
   }
   get conversations(): Collection<Conversation> {
     return this.db.collection('Conversations');
