@@ -508,9 +508,8 @@ export const getListCandidateApplyJobController = async (req: Request<ParamsDict
   const { id } = req.params;
   const page = Number(req.query.page) || 1;
   const status = req.query?.status;
-  console.log("status",status)
   const limit = Number(req.query.limit) || 10;
-  const { name, status } = req.query;
+  const { name } = req.query;
   const skip = (page - 1) * limit;
   const filter: any = { job_id: new ObjectId(id) };
   if (name) {
@@ -518,11 +517,11 @@ export const getListCandidateApplyJobController = async (req: Request<ParamsDict
   }
   if (status) {
     if (Array.isArray(status)) {
-      matchConditions.status = {
+      filter.status = {
         $in: status.map(s => parseInt(s as string)),
       };
     } else {
-      matchConditions.status = parseInt(status as string);
+      filter.status = parseInt(status as string);
     }
   }
   const candidates = await db.apply
