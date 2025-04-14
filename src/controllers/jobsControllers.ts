@@ -260,6 +260,7 @@ export const getJobController = async (req: Request<ParamsDictionary, any, any>,
   });
 };
 
+
 export const deleteJobController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const { id } = req.params;
   await db.jobs.deleteOne({ _id: new ObjectId(id) });
@@ -505,19 +506,23 @@ export const recruitmentJobController = async (req: Request<ParamsDictionary, an
 
 export const getListCandidateApplyJobController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const { id } = req.params;
-  console.log('re', req.params, req.query);
   const page = Number(req.query.page) || 1;
   const status = req.query?.status;
-  console.log('status', status, typeof status);
   const limit = Number(req.query.limit) || 10;
-  const { name, status } = req.query;
+  const { name } = req.query;
   const skip = (page - 1) * limit;
   const filter: any = { job_id: new ObjectId(id) };
   if (name) {
     filter.name = { $regex: name as string, $options: 'i' };
   }
   if (status) {
-    filter.status = Number(status);
+    if (Array.isArray(status)) {
+      filter.status = {
+        $in: status.map(s => parseInt(s as string)),
+      };
+    } else {
+      filter.status = parseInt(status as string);
+    }
   }
   const candidates = await db.apply
     .aggregate([
@@ -731,13 +736,13 @@ export const candidateAcceptInvite = async (req: Request<ParamsDictionary, any, 
 
 export const makeInterviewController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const { id } = req.params;
-  const { date, time, note } = req.body;
+  const { date, time, note,address } = req.body;
   await db.apply.updateOne(
     { _id: new ObjectId(id) },
     {
       $set: {
         status: ApplyStatus.WaitingCandidateAcceptSchedule,
-        interview_employee_suggest_schedule: { date, time, note }
+        interview_employee_suggest_schedule: { date, time, note,address }
       }
     }
   );
@@ -748,13 +753,13 @@ export const makeInterviewController = async (req: Request<ParamsDictionary, any
 
 export const candidateChangeInterviewSchedule = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const { id } = req.params;
-  const { date, time, note } = req.body;
+  const { date, time, note,address } = req.body;
   await db.apply.updateOne(
     { _id: new ObjectId(id) },
     {
       $set: {
         status: ApplyStatus.WaitingEmployerAcceptSchedule,
-        interview_candidate_suggest_schedule: { date, time, note }
+        interview_candidate_suggest_schedule: { date, time, note,address }
       }
     }
   );
