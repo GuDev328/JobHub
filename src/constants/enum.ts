@@ -66,7 +66,8 @@ export enum ApplyStatus {
   CandidateRejectInvite,
   CandidateAcceptInvite,
   WaitingCandidateAcceptSchedule,
-  WaitingEmployerAcceptSchedule
+  WaitingEmployerAcceptSchedule,
+  WaitingCandidateAcceptInvite,
 }
 
 export interface PhoneInfo {

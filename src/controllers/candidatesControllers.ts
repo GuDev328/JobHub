@@ -63,7 +63,6 @@ export const getListApplyJobController = async (req: Request<ParamsDictionary, a
   const skip = (page - 1) * limit;
 
   const rawStatus = req.query.status;
-  console.log("rawStatus",rawStatus)
   let statusFilter = {};
 
   // Xử lý nếu có filter theo status
@@ -226,7 +225,6 @@ export const searchJobController = async (req: Request<ParamsDictionary, any, an
   if (city) {
     filter.city = Number(city);
   }
-  console.log(filter);
   let [jobs, totalJobs] = await Promise.all([
     db.jobs
       .aggregate([
@@ -367,5 +365,102 @@ export const evaluateEmployerController = async (req: Request<ParamsDictionary, 
   await db.evaluations.insertOne(evaluation);
   res.status(200).json({
     message: 'Đánh giá thành công'
+  });
+};
+
+
+export const getListInvitedJobController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
+  const userId = req.body.decodeAuthorization.payload.userId;
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  const rawStatus = req.query.status;
+  let statusFilter = {};
+
+  // Xử lý nếu có filter theo status
+  if (rawStatus) {
+    if (Array.isArray(rawStatus)) {
+      statusFilter = { status: { $in: rawStatus.map((item)=>Number(item as string)) } };
+    } else if (typeof rawStatus === "string") {
+      statusFilter = { status: Number(rawStatus) };
+    }
+  }
+ 
+
+  const applyJobs = await db.apply
+    .aggregate([
+      {
+        $match: {
+          candidate_id: new ObjectId(userId),
+          ...statusFilter
+        }
+      },
+      {
+        $lookup: {
+          from: 'Jobs',
+          localField: 'job_id',
+          foreignField: '_id',
+          as: 'job_info'
+        }
+      },
+      {
+        $unwind: '$job_info'
+      },
+      {
+        $lookup: {
+          from: 'Accounts',
+          localField: 'job_info.employer_id',
+          foreignField: '_id',
+          as: 'job_info.employer_account'
+        }
+      },
+      {
+        $unwind: '$job_info.employer_account'
+      },
+      {
+        $lookup: {
+          from: 'Employers',
+          localField: 'job_info.employer_account.user_id',
+          foreignField: '_id',
+          as: 'job_info.employer_info'
+        }
+      },
+      {
+        $unwind: '$job_info.employer_info'
+      },
+      {
+        $lookup: {
+          from: 'Skills',
+          localField: 'job_info.skills',
+          foreignField: '_id',
+          as: 'job_info.skills_info'
+        }
+      },
+      {
+        $lookup: {
+          from: 'Fields',
+          localField: 'job_info.fields',
+          foreignField: '_id',
+          as: 'job_info.fields_info'
+        }
+      }
+    ])
+    .skip(skip)
+    .limit(limit)
+    .toArray();
+  const totalApplyJobs = await db.apply.countDocuments({ candidate_id: new ObjectId(userId) });
+  const totalPages = Math.ceil(totalApplyJobs / limit);
+  res.status(200).json({
+    result: {
+      applyJobs,
+      pagination: {
+        page,
+        limit,
+        total_pages: totalPages,
+        total_records: totalApplyJobs
+      }
+    },
+    message: 'Lấy danh sách ứng tuyển công việc thành công'
   });
 };
