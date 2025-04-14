@@ -369,7 +369,6 @@ export const getListJobController = async (req: Request<ParamsDictionary, any, a
   if (city) {
     filter.city = { $in: JSON.parse(city as string).map(Number) };
   }
-  console.log(filter);
   let [jobs, totalJobs] = await Promise.all([
     db.jobs
       .aggregate([
@@ -632,7 +631,6 @@ export const approveCandidateController = async (req: Request<ParamsDictionary, 
     .toArray();
 
   await db.apply.updateOne({ _id: new ObjectId(id) }, { $set: { status: ApplyStatus.Approved } });
-  console.log(apply);
   sendMailSuitableCV({
     toAddress: apply.candidate_account.email,
     candidateName: apply.candidate_info.name,
@@ -655,7 +653,6 @@ export const rejectCandidateController = async (req: Request<ParamsDictionary, a
 export const inviteCandidateController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const { id } = req.params;
   const { job_id } = req.body;
-
   const candidate = await db.accounts
     .aggregate([
       {
@@ -697,14 +694,24 @@ export const inviteCandidateController = async (req: Request<ParamsDictionary, a
     ])
     .toArray();
   const job = await db.jobs.findOne({ _id: new ObjectId(job_id) });
+  const existingApply = await db.apply.findOne({
+    job_id:new ObjectId(job_id),
+    candidate_id: new ObjectId(id),
+  });
+  if(existingApply){
+    throw new ErrorWithStatus({
+      message: 'Ứng viên đã được mời',
+      status: httpStatus.FORBIDDEN
+    });
+  }
   await db.apply.insertOne(
     new Apply({
-      job_id,
+      job_id:new ObjectId(job_id),
       candidate_id: new ObjectId(id),
-      status: ApplyStatus.WaitingCandidateAcceptSchedule,
+      status: ApplyStatus.WaitingCandidateAcceptInvite,
       content: '',
-      cv: candidate[0].candidate_info.cv
-        .map((cv: CVType) => {
+      cv: candidate[0].candidate_info?.cv
+        ?.map((cv: CVType) => {
           if (cv.is_public) return cv.cv;
           return null;
         })
@@ -714,13 +721,13 @@ export const inviteCandidateController = async (req: Request<ParamsDictionary, a
     })
   );
 
-  sendMailInviteCandidate({
-    toAddress: candidate[0].candidate_info.email,
-    candidateName: candidate[0].candidate_info.name,
-    employerName: employer[0].employer_info.name,
-    jobTitle: job?.name || '',
-    jobId: job_id
-  });
+  // sendMailInviteCandidate({
+  //   toAddress: candidate[0].candidate_info.email,
+  //   candidateName: candidate[0].candidate_info.name,
+  //   employerName: employer[0].employer_info.name,
+  //   jobTitle: job?.name || '',
+  //   jobId: job_id
+  // });
   res.status(200).json({
     message: 'Mời phỏng vấn thành công'
   });
