@@ -60,11 +60,26 @@ export const getListApplyJobController = async (req: Request<ParamsDictionary, a
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const skip = (page - 1) * limit;
+
+  const rawStatus = req.query.status;
+  console.log("rawStatus",rawStatus)
+  let statusFilter = {};
+
+  // Xử lý nếu có filter theo status
+  if (rawStatus) {
+    if (Array.isArray(rawStatus)) {
+      statusFilter = { status: { $in: rawStatus.map((item)=>Number(item as string)) } };
+    } else if (typeof rawStatus === "string") {
+      statusFilter = { status: Number(rawStatus) };
+    }
+  }
+
   const applyJobs = await db.apply
     .aggregate([
       {
         $match: {
-          candidate_id: new ObjectId(userId)
+          candidate_id: new ObjectId(userId),
+          ...statusFilter
         }
       },
       {

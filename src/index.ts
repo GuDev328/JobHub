@@ -3,6 +3,7 @@ import { createServer } from 'http';
 import usersRouters from '~/routers/accountsRouters';
 import mediasRouters from '~/routers/mediasRouters';
 import conversationsRouters from '~/routers/conversationsRouters';
+import applyRouters from '~/routers/applyJobRouters';
 import jobsRouters from '~/routers/jobsRouters';
 import adminsRouter from '~/routers/adminRouters';
 import employersRouter from '~/routers/employerRouters';
@@ -39,6 +40,7 @@ app.use('/candidates', candidatesRouters);
 app.use('/admins', adminsRouter);
 app.use('/employers', employersRouter);
 app.use('/chats', conversationsRouters);
+app.use('/apply', applyRouters);
 
 app.use(defaultsErrorHandler);
 
