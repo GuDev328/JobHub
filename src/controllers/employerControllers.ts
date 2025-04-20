@@ -231,6 +231,7 @@ export const getListCandicateController = async (req: Request<ParamsDictionary, 
 export const getListEvaluationController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const { page, limit } = req.query;
   const userId = req.body.decodeAuthorization.payload.userId;
+  const { id } = req.params;
   const employerId = new ObjectId(userId);
 
   const pageNum = parseInt(page as string) || 1;
@@ -243,7 +244,7 @@ export const getListEvaluationController = async (req: Request<ParamsDictionary,
   const evaluations = await db.evaluations
     .aggregate([
       {
-        $match: { employer_id: employerId }
+        $match: { employer_id: new ObjectId(id) }
       },
       {
         $lookup: {
@@ -272,9 +273,76 @@ export const getListEvaluationController = async (req: Request<ParamsDictionary,
     ])
     .toArray();
 
+  // Tính thống kê rate và phần trăm isEncouragedToWorkHere
+  const rateStats = await db.evaluations
+    .aggregate([
+      {
+        $match: { employer_id: new ObjectId(id) }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          rate1: { $sum: { $cond: [{ $eq: ['$rate', 1] }, 1, 0] } },
+          rate2: { $sum: { $cond: [{ $eq: ['$rate', 2] }, 1, 0] } },
+          rate3: { $sum: { $cond: [{ $eq: ['$rate', 3] }, 1, 0] } },
+          rate4: { $sum: { $cond: [{ $eq: ['$rate', 4] }, 1, 0] } },
+          rate5: { $sum: { $cond: [{ $eq: ['$rate', 5] }, 1, 0] } },
+          encouragedCount: { $sum: { $cond: [{ $eq: ['$isEncouragedToWorkHere', true] }, 1, 0] } },
+          avgRate: { $avg: '$rate' }
+        }
+      },
+      {
+        $project: {
+          avgRate: { $round: ['$avgRate', 2] },
+          rateCounts: {
+            rate1: '$rate1',
+            rate2: '$rate2',
+            rate3: '$rate3',
+            rate4: '$rate4',
+            rate5: '$rate5'
+          },
+          rateDistribution: {
+            rate1: { $multiply: [{ $divide: ['$rate1', '$total'] }, 100] },
+            rate2: { $multiply: [{ $divide: ['$rate2', '$total'] }, 100] },
+            rate3: { $multiply: [{ $divide: ['$rate3', '$total'] }, 100] },
+            rate4: { $multiply: [{ $divide: ['$rate4', '$total'] }, 100] },
+            rate5: { $multiply: [{ $divide: ['$rate5', '$total'] }, 100] }
+          },
+          encouragedPercentage: { $multiply: [{ $divide: ['$encouragedCount', '$total'] }, 100] }
+        }
+      }
+    ])
+    .toArray();
+
+  const rateSummary = rateStats[0] || {
+    avgRate: 0,
+    rateCounts: { rate1: 0, rate2: 0, rate3: 0, rate4: 0, rate5: 0 },
+    rateDistribution: { rate1: 0, rate2: 0, rate3: 0, rate4: 0, rate5: 0 },
+    encouragedPercentage: 0
+  };
+
   res.status(200).json({
     message: 'Lấy danh sách đánh giá thành công',
     result: evaluations,
+    rateSummary: {
+      averageRate: rateSummary.avgRate,
+      rateCounts: {
+        rate1: rateSummary.rateCounts.rate1,
+        rate2: rateSummary.rateCounts.rate2,
+        rate3: rateSummary.rateCounts.rate3,
+        rate4: rateSummary.rateCounts.rate4,
+        rate5: rateSummary.rateCounts.rate5
+      },
+      rateDistribution: {
+        rate1: Number(rateSummary.rateDistribution.rate1.toFixed(2)),
+        rate2: Number(rateSummary.rateDistribution.rate2.toFixed(2)),
+        rate3: Number(rateSummary.rateDistribution.rate3.toFixed(2)),
+        rate4: Number(rateSummary.rateDistribution.rate4.toFixed(2)),
+        rate5: Number(rateSummary.rateDistribution.rate5.toFixed(2))
+      },
+      encouragedPercentage: Number(rateSummary.encouragedPercentage.toFixed(2))
+    },
     pagination: {
       page: pageNum,
       limit: limitNum,

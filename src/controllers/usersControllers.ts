@@ -137,6 +137,22 @@ export const getMeController = async (req: Request<ParamsDictionary, any, any>, 
         },
         {
           $unwind: '$employer_info'
+        },
+        {
+          $lookup: {
+            from: 'Skills',
+            localField: 'employer_info.skills',
+            foreignField: '_id',
+            as: 'skills_info'
+          }
+        },
+        {
+          $lookup: {
+            from: 'Fields',
+            localField: 'employer_info.fields',
+            foreignField: '_id',
+            as: 'fields_info'
+          }
         }
       ])
       .toArray();
@@ -198,6 +214,21 @@ export const updateMeController = async (req: Request<ParamsDictionary, any, any
       })
     );
   }
+  if (employer_body?.skills) {
+    skillsFinds = await Promise.all(
+      employer_body?.skills.map(async (skill: string) => {
+        const techFind = await db.skills.findOne({ name: skill });
+        if (!techFind) {
+          fieldsFinds.map(async (fieldId: ObjectId) => {
+            const init = await db.skills.insertOne(new Skill({ name: skill, field_id: fieldId }));
+            return new ObjectId(init.insertedId);
+          });
+        } else {
+          return new ObjectId(techFind._id);
+        }
+      })
+    );
+  }
   if (account.role === UserRole.Candidate && account.user_id) {
     await db.candidates.updateOne(
       { _id: account.user_id },
@@ -230,14 +261,19 @@ export const updateMeController = async (req: Request<ParamsDictionary, any, any
       { _id: account.user_id },
       {
         $set: {
-          address: employer_body.address,
-          avatar: employer_body.avatar,
-          cover_photo: employer_body.cover_photo,
-          description: employer_body.description,
-          employer_size: employer_body.employer_size,
+          address: employer_body?.address,
+          avatar: employer_body?.avatar,
+          cover_photo: employer_body?.cover_photo,
+          description: employer_body?.description,
+          employer_size: employer_body?.employer_size,
           fields: fieldsFinds,
-          name: employer_body.name,
-          phone_number: employer_body.phone_number
+          name: employer_body?.name,
+          phone_number: employer_body?.phone_number,
+          skills:skillsFinds,
+          isOt:employer_body?.isOt,
+          date_working:employer_body?.date_working,
+          time_working:employer_body?.time_working,
+          city:employer_body?.city
         }
       }
     );

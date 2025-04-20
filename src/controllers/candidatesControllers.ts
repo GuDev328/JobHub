@@ -63,6 +63,7 @@ export const getListApplyJobController = async (req: Request<ParamsDictionary, a
   const skip = (page - 1) * limit;
 
   const rawStatus = req.query.status;
+  const jobId = req.query.job_id;
   let statusFilter = {};
 
   // Xử lý nếu có filter theo status
@@ -73,7 +74,9 @@ export const getListApplyJobController = async (req: Request<ParamsDictionary, a
       statusFilter = { status: Number(rawStatus) };
     }
   }
-
+  if(jobId){
+    statusFilter = {...statusFilter,job_id: new ObjectId(jobId as string)}
+  }
   const applyJobs = await db.apply
     .aggregate([
       {
@@ -353,14 +356,18 @@ export const searchJobController = async (req: Request<ParamsDictionary, any, an
 
 export const evaluateEmployerController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const { id } = req.params;
-  const { rate, content } = req.body;
+  const { rate, content,title,isEncouragedToWorkHere } = req.body;
+  console.log("check body",req.body)
+  console.log("check isEncouragedToWorkHere",isEncouragedToWorkHere)
   const candidateId = req.body.decodeAuthorization.payload.userId;
   const employerId = new ObjectId(id);
   const evaluation = new Evaluation({
     employer_id: employerId,
     candidate_id: new ObjectId(candidateId),
     rate,
-    content
+    content,
+    title,
+    isEncouragedToWorkHere
   });
   await db.evaluations.insertOne(evaluation);
   res.status(200).json({
@@ -462,5 +469,201 @@ export const getListInvitedJobController = async (req: Request<ParamsDictionary,
       }
     },
     message: 'Lấy danh sách ứng tuyển công việc thành công'
+  });
+};
+
+export const getDetailProfileEmployerController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  const employerId = req.params.id;
+  const applyJobs = await db.employer
+    .aggregate([
+      {
+        $match: {
+          _id: new ObjectId(employerId as string),
+        }
+      },
+      {
+        $lookup: {
+          from: 'Skills',
+          localField: 'skills',
+          foreignField: '_id',
+          as: 'skills_info'
+        }
+      },
+      {
+        $lookup: {
+          from: 'Fields',
+          localField: 'fields',
+          foreignField: '_id',
+          as: 'fields_info'
+        }
+      }
+    ])
+    .skip(skip)
+    .limit(limit)
+    .toArray();
+  res.status(200).json({
+    result: {
+      applyJobs,
+    },
+    message: 'Lấy danh sách ứng tuyển công việc thành công'
+  });
+};
+
+export const getListJobController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
+  const {
+    page,
+    limit,
+    key,
+    level,
+    education,
+    type_work,
+    year_experience,
+    gender,
+    fields,
+    skills,
+    salary_min,
+    salary_max,
+    status,
+    deadline,
+    createdAt,
+    city
+  } = req.query;
+  const pageNumber = Number(page) || 1;
+  const limitNumber = Number(limit) || 10;
+  const skip = (pageNumber - 1) * limitNumber;
+  console.log("check",req.params?.id)
+  const  employer_id = new ObjectId(req.params?.id)
+
+ 
+ 
+  let [jobs, totalJobs] = await Promise.all([
+    db.jobs
+      .aggregate([
+        {
+          $skip: skip
+        },
+        {
+          $limit: limitNumber
+        },
+        {
+          $lookup: {
+            from: 'Accounts',
+            localField: 'employer_id',
+            foreignField: '_id',
+            as: 'employer_account'
+          }
+        },
+        {
+          $unwind: '$employer_account'
+        },
+        {
+          $match: {
+            'employer_account.user_id':employer_id // userId là tham số truyền vào
+          }
+        },
+        {
+          $lookup: {
+            from: 'Employers',
+            localField: 'employer_account.user_id',
+            foreignField: '_id',
+            as: 'employer_info'
+          }
+        },
+        {
+          $unwind: '$employer_info'
+        },
+        {
+          $lookup: {
+            from: 'Skills',
+            localField: 'skills',
+            foreignField: '_id',
+            as: 'skills_info'
+          }
+        },
+        {
+          $lookup: {
+            from: 'Fields',
+            localField: 'fields',
+            foreignField: '_id',
+            as: 'fields_info'
+          }
+        },
+        {
+          $lookup: {
+            from: 'Applies',
+            let: { jobId: '$_id' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $eq: ['$job_id', '$$jobId']
+                  }
+                }
+              },
+              {
+                $count: 'total'
+              }
+            ],
+            as: 'applications_count'
+          }
+        },
+        {
+          $addFields: {
+            total_applications: {
+              $ifNull: [{ $arrayElemAt: ['$applications_count.total', 0] }, 0]
+            }
+          }
+        },
+        {
+          $lookup: {
+            from: 'Evaluations',
+            localField: 'employer_id',
+            foreignField: 'employer_id',
+            as: 'employer_evaluations'
+          }
+        },
+        {
+          $addFields: {
+            employer_rating: {
+              average_rate: {
+                $cond: [{ $eq: [{ $size: '$employer_evaluations' }, 0] }, 0, { $avg: '$employer_evaluations.rate' }]
+              },
+              total_evaluations: { $size: '$employer_evaluations' }
+            }
+          }
+        },
+        {
+          $project: {
+            applications_count: 0,
+            employer_evaluations: 0
+          }
+        }
+      ])
+      .toArray(),
+    db.jobs.countDocuments()
+  ]);
+  totalJobs = totalJobs + 0;
+  jobs = jobs.map((job: any) => {
+    job.city_info = provinces.find((city: any) => city._id === job.city);
+    return job;
+  });
+  const totalPages = Math.ceil(totalJobs / limitNumber);
+
+  const result = {
+    jobs,
+    pagination: {
+      page: pageNumber,
+      limit: limitNumber,
+      total_pages: totalPages,
+      total_records: totalJobs
+    }
+  };
+  res.status(200).json({
+    result,
+    message: 'Lấy danh sách công việc thành công'
   });
 };
