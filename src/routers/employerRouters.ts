@@ -11,6 +11,6 @@ const router = Router();
 
 router.post('/request-verification', accessTokenValidator, catchError(verifyEmployerController));
 router.get('/get-candicate', accessTokenValidator, catchError(getListCandicateController));
-router.get('/evaluation', accessTokenValidator, catchError(getListEvaluationController));
+router.get('/evaluation/:id', accessTokenValidator, catchError(getListEvaluationController));
 
 export default router;

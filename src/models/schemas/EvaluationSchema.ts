@@ -7,6 +7,9 @@ interface EvaluationType {
   candidate_id: ObjectId;
   rate: number;
   content: string;
+  title:string
+  createdAt?:Date
+  isEncouragedToWorkHere:boolean
 }
 
 export class Evaluation {
@@ -15,6 +18,9 @@ export class Evaluation {
   candidate_id: ObjectId;
   rate: number;
   content: string;
+  title:string
+  createdAt:Date
+  isEncouragedToWorkHere:boolean
 
   constructor(evaluation: EvaluationType) {
     this._id = evaluation._id || new ObjectId();
@@ -22,5 +28,8 @@ export class Evaluation {
     this.candidate_id = evaluation.candidate_id || new ObjectId();
     this.rate = evaluation.rate || 5;
     this.content = evaluation.content || '';
+    this.title = evaluation.title || '';
+    this.createdAt = new Date();
+    this.isEncouragedToWorkHere = evaluation.isEncouragedToWorkHere ?? true;
   }
 }

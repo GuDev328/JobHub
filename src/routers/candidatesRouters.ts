@@ -7,7 +7,9 @@ import {
   getListApplyJobController,
   searchJobController,
   evaluateEmployerController,
-  getListInvitedJobController
+  getListInvitedJobController,
+  getDetailProfileEmployerController,
+  getListJobController
 } from '~/controllers/candidatesControllers';
 const router = Router();
 
@@ -20,5 +22,7 @@ router.get('/list-apply-job', accessTokenValidator, catchError(getListApplyJobCo
 router.get('/list-invited-job', accessTokenValidator, catchError(getListInvitedJobController));
 
 router.get('/search-job', accessTokenValidator, catchError(searchJobController));
+router.get('/employer-detail/:id', accessTokenValidator, catchError(getDetailProfileEmployerController));
+router.get('/employer-jobs/:id', accessTokenValidator, catchError(getListJobController));
 
 export default router;
