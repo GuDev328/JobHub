@@ -17,7 +17,7 @@ interface JobType {
   salary: number | number[];
   status?: JobStatus;
   city: number;
-  deadline: Date | null;
+  deadline: Date | null; active?:boolean
 }
 
 export class Job {
@@ -38,6 +38,7 @@ export class Job {
   city: number;
   deadline: Date | null;
   createdAt: Date;
+  active?:boolean
 
   constructor(job: JobType) {
     this._id = job._id || new ObjectId();
@@ -57,5 +58,6 @@ export class Job {
     this.city = job.city;
     this.deadline = job.deadline;
     this.createdAt = new Date();
+    this.active = job.active || true
   }
 }

@@ -18,11 +18,14 @@ import {
   candidateAcceptInvite,
   inviteCandidateController,
   acceptScheduleController,
-  candidateChangeInterviewSchedule
+  candidateChangeInterviewSchedule,
+  getListCountCandidateController,
+  changeStatusJob
 } from '~/controllers/jobsControllers';
 const router = Router();
 
 router.post('/', accessTokenValidator, isEmployerValidator, catchError(createJobController));
+router.get('/count/:id', accessTokenValidator, isEmployerValidator, catchError(getListCountCandidateController));
 router.get('/list', accessTokenValidator, catchError(getListJobController));
 
 router.put('/recruitment/:id', accessTokenValidator, isAdminJobValidator, catchError(recruitmentJobController));
@@ -52,6 +55,7 @@ router.post('/accept-schedule/:id', accessTokenValidator, catchError(acceptSched
 router.post('/candidate-change-schedule/:id', accessTokenValidator, catchError(candidateChangeInterviewSchedule));
 
 router.put('/:id', accessTokenValidator, isAdminJobValidator, catchError(updateJobController));
+router.put('/change-status/:id', accessTokenValidator, catchError(changeStatusJob));
 router.get('/:id', accessTokenValidator, catchError(getJobController));
 router.delete('/:id', accessTokenValidator, isAdminJobValidator, catchError(deleteJobController));
 

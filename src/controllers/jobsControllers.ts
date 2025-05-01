@@ -508,11 +508,15 @@ export const getListCandidateApplyJobController = async (req: Request<ParamsDict
   const page = Number(req.query.page) || 1;
   const status = req.query?.status;
   const limit = Number(req.query.limit) || 10;
-  const { name } = req.query;
+  const { name } = req.query || req.params;
+  console.log("name",name)
+  console.log("req.query ",req.query )
+  console.log("req.params",req.params)
   const skip = (page - 1) * limit;
   const filter: any = { job_id: new ObjectId(id) };
+  const filterName :any = {};
   if (name) {
-    filter.name = { $regex: name as string, $options: 'i' };
+    filterName.name = { $regex: name as string, $options: 'i' };
   }
   if (status) {
     if (Array.isArray(status)) {
@@ -555,6 +559,11 @@ export const getListCandidateApplyJobController = async (req: Request<ParamsDict
       },
       {
         $unwind: '$candidate_info'
+      },
+      {
+        $match: {
+          'candidate_info.name': { $regex: String(name || ''), $options: 'i' } // nameKeyword là biến bạn truyền vào
+        }
       }
     ])
     .toArray();
@@ -912,5 +921,62 @@ export const makeFailController = async (req: Request<ParamsDictionary, any, any
   });
   res.status(200).json({
     message: 'Phỏng vấn Failed ứng viên thành công'
+  });
+};
+
+export const getListCountCandidateController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
+  const { id } = req.params;
+  const page = Number(req.query.page) || 1;
+  const status = req.query?.status;
+  const limit = Number(req.query.limit) || 10;
+  const { name } = req.query;
+  const skip = (page - 1) * limit;
+  const filter: any = { job_id: new ObjectId(id) };
+ 
+  const candidatesByStatus = await db.apply
+  .aggregate([
+    {
+      $match: filter // Áp dụng bộ lọc nếu có
+    },
+    {
+      $group: {
+        _id: "$status", // Nhóm theo trường status
+        count: { $sum: 1 } // Tính số lượng cho mỗi trạng thái
+      }
+    },
+    {
+      $project: {
+        _id: 0, // Loại bỏ trường _id mặc định
+        status: "$_id", // Chuyển _id thành status
+        count: 1 // Giữ trường count
+      }
+    },
+    {
+      $sort: {
+        status: 1 // Sắp xếp theo status (tùy chọn, có thể bỏ)
+      }
+    }
+  ])
+  .toArray();
+
+// Ánh xạ kết quả sang tên trạng thái từ ApplyStatus
+
+  res.status(200).json({
+    result: candidatesByStatus,
+    pagination: {
+      page,
+      limit,
+    }
+  });
+};
+
+
+export const changeStatusJob = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
+  const { id } = req.params;
+  const {status} = req.query
+  console.log("check sttus",status)
+  await db.jobs.updateOne({ _id: new ObjectId(id) }, { $set: { status: Number(status) as any } });
+  res.status(200).json({
+    message: 'Chuyển trạng thái công việc thahf công'
   });
 };
