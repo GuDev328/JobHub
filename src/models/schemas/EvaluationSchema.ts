@@ -10,6 +10,8 @@ interface EvaluationType {
   title:string
   createdAt?:Date
   isEncouragedToWorkHere:boolean
+  status?:boolean
+
 }
 
 export class Evaluation {
@@ -21,6 +23,7 @@ export class Evaluation {
   title:string
   createdAt:Date
   isEncouragedToWorkHere:boolean
+  status?:boolean
 
   constructor(evaluation: EvaluationType) {
     this._id = evaluation._id || new ObjectId();
@@ -31,5 +34,7 @@ export class Evaluation {
     this.title = evaluation.title || '';
     this.createdAt = new Date();
     this.isEncouragedToWorkHere = evaluation.isEncouragedToWorkHere ?? true;
+    this.status=evaluation.status || false
+
   }
 }
