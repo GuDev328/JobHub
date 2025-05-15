@@ -10,6 +10,8 @@ import { Chat } from '~/models/schemas/ChatSchema';
 import { Skill } from './../models/schemas/SkillSchema';
 import { Field } from '~/models/schemas/FieldSchema';
 import { Job } from '~/models/schemas/JobSchema';
+import { Package } from '~/models/schemas/Package';
+import { Transaction } from '~/models/schemas/Transaction';
 import { Apply } from '~/models/schemas/ApplySchema';
 import { VerifyEmployer } from '~/models/schemas/VerifySchema';
 import { Evaluation } from '~/models/schemas/EvaluationSchema';
@@ -70,6 +72,12 @@ class DatabaseServices {
   }
   get fields(): Collection<Field> {
     return this.db.collection('Fields');
+  }
+  get packages(): Collection<Package> {
+    return this.db.collection('Packages');
+  }
+  get transactions(): Collection<Transaction> {
+    return this.db.collection('Transactions');
   }
 }
 

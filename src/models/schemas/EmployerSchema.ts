@@ -17,6 +17,9 @@ interface EmployerType {
   fields?: ObjectId[];
   status?: number;
   city?:number;
+  images?:any
+  numberOffFree?:number
+  orderCode?:number
 }
 
 export class Employer {
@@ -35,6 +38,9 @@ export class Employer {
   fields: ObjectId[];
   status: number;
   city:number;
+  images?:any
+  numberOffFree?:number
+  orderCode?:number
 
   constructor(employer: EmployerType) {
     this._id = employer._id || new ObjectId();
@@ -50,7 +56,10 @@ export class Employer {
     this.phone_number = employer.phone_number || [];
     this.address = employer.address || [];
     this.fields = employer.fields || [];
-    this.status = employer.status || 0;
+    this.status = employer.status || 1;
     this.city = employer.city || 0;
+    this.images = employer.images || {};
+    this.numberOffFree = employer.numberOffFree || 2
+    this.orderCode = employer.orderCode || 0
   }
 }

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getChatsController,
   getConversationsController,
+  getConversationsDetailController,
   makeConversationController,
   sendMessageController
 } from '~/controllers/conversationsControllers';
@@ -11,6 +12,7 @@ const router = Router();
 
 router.post('/make-conversation', accessTokenValidator, verifiedUserValidator, catchError(makeConversationController));
 router.get('/get-conversations', accessTokenValidator, verifiedUserValidator, catchError(getConversationsController));
+router.get('/get-conversations/:id', accessTokenValidator, verifiedUserValidator, catchError(getConversationsDetailController));
 router.get('/get-chats/:id', accessTokenValidator, verifiedUserValidator, catchError(getChatsController));
 
 router.post('/send-message', accessTokenValidator, verifiedUserValidator, catchError(sendMessageController));

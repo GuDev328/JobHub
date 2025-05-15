@@ -24,7 +24,7 @@ interface CandidateType {
     content?: string;
     cv?: string;
   };
-  cv?: CVType[];
+  cv?:string;
   skills?: ObjectId[];
   feature_job_position?: string;
 }
@@ -59,7 +59,7 @@ export class Candidate {
     content?: string;
     cv?: string;
   };
-  cv: CVType[];
+  cv: string
 
   constructor(candidate: CandidateType) {
     this._id = candidate._id || new ObjectId();
@@ -84,7 +84,7 @@ export class Candidate {
       content: '',
       cv: ''
     };
-    this.cv = candidate.cv || [];
+    this.cv = candidate.cv || '';
     this.skills = candidate.skills || [];
     this.feature_job_position = candidate.feature_job_position || '';
   }

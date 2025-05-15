@@ -24,6 +24,7 @@
     "@aws-sdk/client-ses": "^3.501.0",
     "@aws-sdk/lib-storage": "^3.501.0",
     "@faker-js/faker": "^8.3.1",
+    "@payos/node": "^1.0.10",
     "@types/cors": "^2.8.17",
     "@types/formidable": "^3.4.5",
     "@types/fs-extra": "^11.0.4",

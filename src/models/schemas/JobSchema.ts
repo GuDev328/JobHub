@@ -6,6 +6,7 @@ interface JobType {
   employer_id: ObjectId;
   name: string;
   description: string;
+  background?: string;
   level: LevelType;
   education: EducationType;
   type_work: TypeWorkType | TypeWorkType[];
@@ -25,6 +26,7 @@ export class Job {
   employer_id: ObjectId;
   name: string;
   description: string;
+  background?: string;
   level: LevelType;
   education: EducationType;
   type_work: TypeWorkType | TypeWorkType[];
@@ -56,6 +58,7 @@ export class Job {
     this.salary = job.salary || 0;
     this.status = JobStatus.Created;
     this.city = job.city;
+    this.background = job.background || '';
     this.deadline = job.deadline;
     this.createdAt = new Date();
     this.active = job.active || true

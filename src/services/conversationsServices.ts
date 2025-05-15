@@ -4,7 +4,7 @@ import { ObjectId } from 'mongodb';
 class ConversationsService {
   constructor() {}
 
-  async getChats(conversation_id: string, limit: number, page: number) {
+  async getChats(conversation_id: string, limit: number=10, page: number=1) {
     const result = await db.chats
       .aggregate([
         { $match: { conversation_id: new ObjectId(conversation_id) } },

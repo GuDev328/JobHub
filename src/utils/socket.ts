@@ -43,6 +43,7 @@ const initializeSocket = (httpServer: ServerHttp) => {
   } = {};
 
   io.on('connection', (socket) => {
+    console.log('👤 New client connected:', socket.id);
     const userId = socket.handshake.auth.decodeAuthorization.userId;
     users[userId] = {
       socketId: socket.id
@@ -66,13 +67,16 @@ const initializeSocket = (httpServer: ServerHttp) => {
     });
 
     socket.on('joinChat', (room) => {
+      console.log("join p",room)
       socket.join(room);
     });
     socket.on('leaveChat', (room) => {
+      console.log("leaveChat p",room)
       socket.leave(room);
     });
 
     socket.on('newChat', (room, chat) => {
+      console.log("check chat",chat)
       io.to(room).emit('chatUpdated', chat);
     });
     socket.on('disconnect', () => {

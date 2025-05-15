@@ -16,7 +16,6 @@ import { CVType } from '~/models/schemas/CandidateSchema';
 
 export const getinforAppyController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
     const { id } = req.params;
-    console.log("id",id)
     const job = await db.apply
       .aggregate([
         {

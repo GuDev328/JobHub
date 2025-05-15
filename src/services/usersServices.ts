@@ -32,14 +32,15 @@ import { Employer } from '~/models/schemas/EmployerSchema';
 
 class UsersService {
   constructor() {}
-  signAccessToken(userId: string, role: UserRole, verify: UserVerifyStatus) {
+  signAccessToken(userId: string, role: UserRole, verify: UserVerifyStatus,username?: string,) {
     return signToken(
       {
         payload: {
           userId,
           role,
           type: TokenType.AccessToken,
-          verify
+          verify,
+          username
         }
       },
       {
@@ -106,7 +107,7 @@ class UsersService {
       const checkPassword = await bcrypt.compareSync(payload.password, user.password);
       if (checkPassword) {
         const [accessToken, refreshToken] = await Promise.all([
-          this.signAccessToken(user._id.toString(), user.role, user.status),
+          this.signAccessToken(user._id.toString(), user.role, user.status,user?.username),
           this.signRefreshToken(user._id.toString(), user.role, user.status)
         ]);
 

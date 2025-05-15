@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { ParamsDictionary } from 'express-serve-static-core';
 import { ObjectId } from 'mongodb';
 import { provinces } from '~/constants/const';
-import { ApplyStatus } from '~/constants/enum';
+import { ApplyStatus, JobStatus, UserRole } from '~/constants/enum';
 import { ErrorWithStatus } from '~/models/Errors';
 import { Apply } from '~/models/schemas/ApplySchema';
 import { Evaluation } from '~/models/schemas/EvaluationSchema';
@@ -175,26 +175,42 @@ export const searchJobController = async (req: Request<ParamsDictionary, any, an
   const limitNumber = Number(limit) || 10;
   const skip = (pageNumber - 1) * limitNumber;
   const filter: any = {};
-
+  const roleUser = req.body.decodeAuthorization.payload.role;
+  if(Number(roleUser as string) == UserRole.Candidate){
+    filter.status = { $ne: JobStatus.Created }; 
+  }
   if (key) {
     filter.name = { $regex: key as string, $options: 'i' };
-  }
-
-  if (level) {
-    filter.level = Number(level);
   }
 
   if (education) {
     filter.education = Number(education);
   }
-
-  if (type_work) {
-    filter.type_work = Number(type_work);
+  
+ 
+  if (city) {
+    filter.city = { $in:JSON.parse(city as string).map(Number) };
   }
-
+  if (level) {
+    filter.level = { $in:JSON.parse(level as string).map(Number) };
+  }
   if (year_experience) {
-    filter.year_experience = Number(year_experience);
+    filter.year_experience = { $in:JSON.parse(year_experience as string).map(Number) };
   }
+  if (type_work) {
+    filter.type_work = { $in:JSON.parse(type_work as string).map(Number) };
+  }
+  // if (level) {
+  //   filter.level = Number(level);
+  // }
+
+  //   if (year_experience) {
+  //     filter.year_experience = Number(year_experience);
+  //   }
+
+  // if (type_work) {
+  //   filter.type_work = Number(type_work);
+  // }
 
   if (gender) {
     filter.gender = Number(gender);
@@ -225,10 +241,8 @@ export const searchJobController = async (req: Request<ParamsDictionary, any, an
   if (status) {
     filter.status = Number(status);
   }
-  if (city) {
-    filter.city = Number(city);
-  }
-  let [jobs, totalJobs] = await Promise.all([
+
+  let [jobs, totalJobs,employers] = await Promise.all([
     db.jobs
       .aggregate([
         {
@@ -330,7 +344,28 @@ export const searchJobController = async (req: Request<ParamsDictionary, any, an
         }
       ])
       .toArray(),
-    db.jobs.countDocuments(filter)
+    db.jobs.countDocuments(filter),
+    db.employer
+    .aggregate([
+      {
+        $match: filter
+      },
+      {
+        $skip: skip
+      },
+      {
+        $limit: limitNumber
+      },
+      {
+        $lookup: {
+          from: 'Fields',
+          localField: 'fields',
+          foreignField: '_id',
+          as: 'fields_info'
+        }
+      },
+    ])
+    .toArray(),
   ]);
   totalJobs = totalJobs + 0;
   jobs = jobs.map((job: any) => {
@@ -341,6 +376,7 @@ export const searchJobController = async (req: Request<ParamsDictionary, any, an
 
   const result = {
     jobs,
+    employers,
     pagination: {
       page: pageNumber,
       limit: limitNumber,
@@ -357,8 +393,6 @@ export const searchJobController = async (req: Request<ParamsDictionary, any, an
 export const evaluateEmployerController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const { id } = req.params;
   const { rate, content,title,isEncouragedToWorkHere } = req.body;
-  console.log("check body",req.body)
-  console.log("check isEncouragedToWorkHere",isEncouragedToWorkHere)
   const candidateId = req.body.decodeAuthorization.payload.userId;
   const employerId = new ObjectId(id);
   const evaluation = new Evaluation({
@@ -535,7 +569,6 @@ export const getListJobController = async (req: Request<ParamsDictionary, any, a
   const pageNumber = Number(page) || 1;
   const limitNumber = Number(limit) || 10;
   const skip = (pageNumber - 1) * limitNumber;
-  console.log("check",req.params?.id)
   const  employer_id = new ObjectId(req.params?.id)
 
  
@@ -667,3 +700,4 @@ export const getListJobController = async (req: Request<ParamsDictionary, any, a
     message: 'Lấy danh sách công việc thành công'
   });
 };
+
