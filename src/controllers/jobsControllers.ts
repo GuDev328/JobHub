@@ -34,8 +34,17 @@ export const createJobController = async (req: Request<ParamsDictionary, any, an
     skills,
     salary,
     city,
+    background,
     deadline
   } = req.body;
+  const idUser = req.body.decodeAuthorization.payload.userId
+  const employer = await db.accounts.findOne({_id:new ObjectId(idUser)})
+   if(!employer?.user_id){
+    throw new ErrorWithStatus({
+      message: 'Không tồn tại',
+      status: httpStatus.FORBIDDEN
+    })
+  }
   const fieldsFinds = await Promise.all(
     fields.map(async (field: string) => {
       const fieldFind = await db.fields.findOne({ name: field });
@@ -60,6 +69,13 @@ export const createJobController = async (req: Request<ParamsDictionary, any, an
       }
     })
   );
+  const Employer = await db.employer.findOne({_id:employer.user_id})
+  if(Employer?.numberOffFree && Employer?.numberOffFree <=0){
+    throw new ErrorWithStatus({
+      message: 'Nhà tuyển dụng đã hết số lượt đăng tuyển',
+      status: httpStatus.FORBIDDEN
+    });
+  }
   await db.jobs.insertOne(
     new Job({
       employer_id: new ObjectId(req.body.decodeAuthorization.payload.userId),
@@ -74,9 +90,14 @@ export const createJobController = async (req: Request<ParamsDictionary, any, an
       fields: fieldsFinds,
       skills: skillsFinds,
       salary,
+      background,
       city,
       deadline: new Date(deadline)
     })
+  );
+  await db.employer.updateOne(
+    { _id: employer.user_id },
+    { $inc: { numberOffFree: -1 } }
   );
   res.status(200).json({
     message: 'Tạo công việc thành công'
@@ -97,6 +118,7 @@ export const updateJobController = async (req: Request<ParamsDictionary, any, an
     fields,
     skills,
     salary,
+    background,
     deadline
   } = req.body;
   const fieldsFinds = await Promise.all(
@@ -138,7 +160,8 @@ export const updateJobController = async (req: Request<ParamsDictionary, any, an
         fields: fieldsFinds,
         skills: skillsFinds,
         salary,
-        deadline
+        background,
+        deadline: new Date(deadline)
       }
     }
   );
@@ -509,9 +532,6 @@ export const getListCandidateApplyJobController = async (req: Request<ParamsDict
   const status = req.query?.status;
   const limit = Number(req.query.limit) || 10;
   const { name } = req.query || req.params;
-  console.log("name",name)
-  console.log("req.query ",req.query )
-  console.log("req.params",req.params)
   const skip = (page - 1) * limit;
   const filter: any = { job_id: new ObjectId(id) };
   const filterName :any = {};
@@ -719,12 +739,7 @@ export const inviteCandidateController = async (req: Request<ParamsDictionary, a
       candidate_id: new ObjectId(id),
       status: ApplyStatus.WaitingCandidateAcceptInvite,
       content: '',
-      cv: candidate[0].candidate_info?.cv
-        ?.map((cv: CVType) => {
-          if (cv.is_public) return cv.cv;
-          return null;
-        })
-        .filter((cv: string | null) => cv !== null),
+      cv: candidate[0]?.candidate_info?.cv,
       email: candidate[0].candidate_info.email,
       phone_number: candidate[0].candidate_info.phone_number
     })
@@ -974,7 +989,6 @@ export const getListCountCandidateController = async (req: Request<ParamsDiction
 export const changeStatusJob = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const { id } = req.params;
   const {status} = req.query
-  console.log("check sttus",status)
   await db.jobs.updateOne({ _id: new ObjectId(id) }, { $set: { status: Number(status) as any } });
   res.status(200).json({
     message: 'Chuyển trạng thái công việc thahf công'

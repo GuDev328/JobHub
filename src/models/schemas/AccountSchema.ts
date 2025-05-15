@@ -11,6 +11,8 @@ interface AccountType {
   forgot_email_token: string;
   status: UserVerifyStatus;
   active?:boolean
+  username?:string
+  avatar?:string
 }
 
 export class Account {
@@ -23,6 +25,8 @@ export class Account {
   forgot_email_token: string;
   status: UserVerifyStatus;
   active?:boolean
+  username?:string
+  avatar?:string
 
   constructor(account: AccountType) {
     this._id = account._id || new ObjectId();
@@ -34,5 +38,7 @@ export class Account {
     this.forgot_email_token = account.forgot_email_token || '';
     this.status = account.status || 0;
     this.active=account.active || true
+    this.username = account.username || '';
+    this.avatar = account.avatar || '';
   }
 }

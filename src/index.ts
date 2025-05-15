@@ -2,7 +2,10 @@ import express from 'express';
 import { createServer } from 'http';
 import usersRouters from '~/routers/accountsRouters';
 import mediasRouters from '~/routers/mediasRouters';
+import payRouters from '~/routers/payRouter';
 import conversationsRouters from '~/routers/conversationsRouters';
+import packagesRouters from '~/routers/packageRouter';
+import transactionRouters from '~/routers/transactionsRouter';
 import applyRouters from '~/routers/applyJobRouters';
 import jobsRouters from '~/routers/jobsRouters';
 import adminsRouter from '~/routers/adminRouters';
@@ -33,6 +36,7 @@ app.use(express.json());
 initializeSocket(httpServer);
 
 app.use('/users', usersRouters);
+app.use('/payment', payRouters);
 app.use('/medias', mediasRouters);
 app.use('/jobs', jobsRouters);
 app.use('/others', othersRouters);
@@ -40,6 +44,8 @@ app.use('/candidates', candidatesRouters);
 app.use('/admins', adminsRouter);
 app.use('/employers', employersRouter);
 app.use('/chats', conversationsRouters);
+app.use('/package', packagesRouters);
+app.use('/transaction', transactionRouters);
 app.use('/apply', applyRouters);
 
 app.use(defaultsErrorHandler);

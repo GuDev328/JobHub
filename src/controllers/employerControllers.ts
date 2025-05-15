@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { ParamsDictionary } from 'express-serve-static-core';
 import { ObjectId } from 'mongodb';
+import { UserRole } from '~/constants/enum';
+
 import { VerifyEmployer } from '~/models/schemas/VerifySchema';
 import db from '~/services/databaseServices';
 
@@ -61,12 +63,12 @@ export const getListCandicateController = async (req: Request<ParamsDictionary, 
   if (status) {
     matchConditions.status = parseInt(status as string);
   }
-  if (fields) {
-    matchConditions.fields = { $in: (fields as string[]).map((field: string) => new ObjectId(field)) };
-  }
-  if (skills) {
-    matchConditions.skills = { $in: (skills as string[]).map((skill: string) => new ObjectId(skill)) };
-  }
+  // if (fields) {
+  //   matchConditions.fields = { $in: (fields as string[]).map((field: string) => new ObjectId(field)) };
+  // }
+  // if (skills) {
+  //   matchConditions.skills = { $in: (skills as string[]).map((skill: string) => new ObjectId(skill)) };
+  // }
 
   const totalRecords = await db.accounts
     .aggregate([
@@ -117,6 +119,20 @@ export const getListCandicateController = async (req: Request<ParamsDictionary, 
                   $or: [
                     { 'employer_info.phone_number': { $regex: phone_number } },
                     { 'candidate_info.phone_number': { $regex: phone_number } }
+                  ]
+                }
+              : {},
+              skills
+              ? {
+                  $or: [
+                    { 'candidate_info.skills': { $in: (skills as string[]).map((skill: string) => new ObjectId(skill))} }
+                  ]
+                }
+              : {},
+              fields
+              ? {
+                  $or: [
+                    { 'candidate_info.fields': { $in: (fields as string[]).map((skill: string) => new ObjectId(skill))} }
                   ]
                 }
               : {}
@@ -198,6 +214,20 @@ export const getListCandicateController = async (req: Request<ParamsDictionary, 
                     { 'candidate_info.phone_number': { $regex: phone_number } }
                   ]
                 }
+              : {},
+              skills
+              ? {
+                  $or: [
+                    { 'candidate_info.skills': { $in: (skills as string[]).map((skill: string) => new ObjectId(skill))} }
+                  ]
+                }
+              : {},
+              fields
+              ? {
+                  $or: [
+                    { 'candidate_info.fields': { $in: (fields as string[]).map((skill: string) => new ObjectId(skill))} }
+                  ]
+                }
               : {}
           ]
         }
@@ -237,14 +267,21 @@ export const getListEvaluationController = async (req: Request<ParamsDictionary,
   const pageNum = parseInt(page as string) || 1;
   const limitNum = parseInt(limit as string) || 10;
   const skipNum = (pageNum - 1) * limitNum;
-
-  const totalRecords = await db.evaluations.countDocuments({ employer_id: employerId });
-  const total_pages = Math.ceil(totalRecords / limitNum);
-
+  
+    const totalRecords = await db.evaluations.countDocuments({ employer_id: employerId });
+    const total_pages = Math.ceil(totalRecords / limitNum);
+    const filter: any = {};
+    const roleUser = req.body.decodeAuthorization.payload.role;
+    
+    if (Number(roleUser as string) === UserRole.Candidate) {
+      filter.status = true; 
+    }
+    
+    filter.employer_id = new ObjectId(id); // thêm employer_id vào filter
   const evaluations = await db.evaluations
     .aggregate([
       {
-        $match: { employer_id: new ObjectId(id) }
+        $match: filter
       },
       {
         $lookup: {
@@ -277,7 +314,7 @@ export const getListEvaluationController = async (req: Request<ParamsDictionary,
   const rateStats = await db.evaluations
     .aggregate([
       {
-        $match: { employer_id: new ObjectId(id) }
+        $match: filter
       },
       {
         $group: {
@@ -349,5 +386,57 @@ export const getListEvaluationController = async (req: Request<ParamsDictionary,
       total_pages,
       total_records: totalRecords
     }
+  });
+};
+
+export const getListEmployer= async (req: Request<ParamsDictionary, any, any>, res: Response) => {
+  const { page, limit, email,name } = req.query;
+  const pageNum = parseInt(page as string) || 1;
+  const limitNum = parseInt(limit as string) || 10;
+  const skipNum = (pageNum - 1) * limitNum;
+
+  const matchConditions: any = {};
+
+  if (email) {
+    matchConditions.email = { $regex: email, $options: 'i' };
+  }
+  if (name) {
+    matchConditions.name = { $regex: name, $options: 'i' };
+  }
+  
+
+  const evaluations = await db.employer
+    .aggregate([
+      {
+        $match: matchConditions
+      },
+      {
+        $lookup: {
+          from: 'Accounts',
+          localField: '_id',
+          foreignField: 'user_id',
+          as: 'account_info'
+        }
+      },
+      {
+        $unwind: '$account_info'
+      },
+      {
+        $lookup: {
+          from: 'Fields',
+          localField: 'fields',
+          foreignField: '_id',
+          as: 'fields_info'
+        }
+      },
+      { $skip: skipNum },
+      { $limit: limitNum }
+    ])
+    .toArray();
+
+  // Tính thống kê rate và phần trăm isEncouragedToWorkHere
+  res.status(200).json({
+    message: 'Lấy danh sách nhà tuyển dụng thành công',
+    result: evaluations,
   });
 };

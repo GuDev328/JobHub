@@ -4,7 +4,6 @@ import { ErrorWithStatus } from '~/models/Errors';
 import { httpStatus } from '~/constants/httpStatus';
 import { File } from 'formidable';
 import fs from 'fs-extra';
-import { nanoid } from 'nanoid';
 
 export const handleUploadImage = async (req: Request) => {
   const formidable = (await import('formidable')).default;

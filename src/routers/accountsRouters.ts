@@ -10,6 +10,7 @@ import {
   registerController,
   resendVerifyEmailController,
   resetPasswordController,
+  updateAccountController,
   updateMeController,
   verifyEmailController
 } from '~/controllers/usersControllers';
@@ -44,6 +45,7 @@ router.post(
 );
 router.get('/get-me', accessTokenValidator, catchError(getMeController));
 router.put('/update-me', accessTokenValidator, catchError(updateMeController));
+router.put('/update-account', accessTokenValidator, catchError(updateAccountController));
 router.post('/change-password', accessTokenValidator, changePasswordValidator, catchError(changePasswordController));
 
 export default router;

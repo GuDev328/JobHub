@@ -4,6 +4,7 @@ import { pick } from 'lodash';
 import { ObjectId } from 'mongodb';
 import { env } from '~/constants/config';
 import { UserRole } from '~/constants/enum';
+import bcrypt from 'bcrypt';
 import {
   ChangePasswordRequest,
   ForgotPasswordRequest,
@@ -19,6 +20,8 @@ import { Field } from '~/models/schemas/FieldSchema';
 import { Skill } from '~/models/schemas/SkillSchema';
 import db from '~/services/databaseServices';
 import userService from '~/services/usersServices';
+import { ErrorWithStatus } from '~/models/Errors';
+import { httpStatus } from '~/constants/httpStatus';
 
 export const loginController = async (req: Request<ParamsDictionary, any, LoginRequest>, res: Response) => {
   const result = await userService.login(req.body);
@@ -119,7 +122,7 @@ export const getMeController = async (req: Request<ParamsDictionary, any, any>, 
         }
       ])
       .toArray();
-  } else {
+  } else if(req.body.decodeAuthorization.payload.role === UserRole.Employer) {
     result = await db.accounts
       .aggregate([
         {
@@ -156,6 +159,16 @@ export const getMeController = async (req: Request<ParamsDictionary, any, any>, 
         }
       ])
       .toArray();
+  }else{
+    result = await db.accounts
+      .aggregate([
+        {
+          $match: {
+            _id: new ObjectId(req.body.decodeAuthorization.payload.userId)
+          }
+        },
+      ])
+      .toArray();
   }
   res.status(200).json({
     result: result[0],
@@ -166,7 +179,9 @@ export const getMeController = async (req: Request<ParamsDictionary, any, any>, 
 export const updateMeController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
   const userId = new ObjectId(req.body.decodeAuthorization.payload.userId);
   const { candidate_body, employer_body } = req.body;
-
+  if(candidate_body?.avatar || employer_body?.avatar){
+    await db.accounts.findOneAndUpdate({_id:userId},{$set:{avatar:candidate_body?.avatar || employer_body?.avatar}})
+  }
   const account = await db.accounts.findOne({ _id: userId });
   if (!account) {
     throw new Error('Account not found');
@@ -273,7 +288,8 @@ export const updateMeController = async (req: Request<ParamsDictionary, any, any
           isOt:employer_body?.isOt,
           date_working:employer_body?.date_working,
           time_working:employer_body?.time_working,
-          city:employer_body?.city
+          city:employer_body?.city,
+          images:employer_body?.images
         }
       }
     );
@@ -334,5 +350,25 @@ export const changePasswordController = async (
   res.status(200).json({
     result,
     message: 'Change Password sucess'
+  });
+};
+
+
+export const updateAccountController = async (req: Request<ParamsDictionary, any, any>, res: Response) => {
+  const userId = new ObjectId(req.body.decodeAuthorization.payload.userId);
+  const {username,avatar} = req.body;
+
+  const account = await db.accounts.findOne({ _id: userId });
+  if (!account) {
+    throw new Error('Account not found');
+  }
+  await db.accounts.updateOne({_id:userId},{
+    $set:{
+      username
+    }
+  })
+
+  res.status(200).json({
+    message: 'Update account suscess'
   });
 };
